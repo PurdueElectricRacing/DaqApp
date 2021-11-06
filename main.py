@@ -2,7 +2,6 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from accessory_widgets.frame_viewer import FrameViewer
 from accessory_widgets.variable_editor import VariableEditor
 from display_widgets.plot_widget import PlotWidget
-from display_widgets.mat_plot_widget import MatPlotWidget
 from communication.can_bus import CanBus
 from communication.daq_protocol import DaqProtocol
 from display_widgets.lcd_widget import LcdDisplay
@@ -38,6 +37,19 @@ class Main(QtWidgets.QMainWindow):
         self.ui.statusbar.addWidget(self.ui.comlbl)
         self.ui.statusbar.addWidget(self.ui.loadlbl)
 
+        # Menu Bar Tools
+        self.ui.play_icon = self.style().standardIcon(getattr(QtWidgets.QStyle, 'SP_MediaPlay'))
+        self.ui.pause_icon = self.style().standardIcon(getattr(QtWidgets.QStyle, 'SP_MediaPause'))
+        self.ui.clear_icon = self.style().standardIcon(getattr(QtWidgets.QStyle, 'SP_DialogResetButton'))
+        self.ui.reconnect_icon = self.style().standardIcon(getattr(QtWidgets.QStyle, 'SP_BrowserReload'))
+        self.ui.actionPlayPause = QtWidgets.QAction(self.ui.play_icon, "play_pause", self.ui.menubar)
+        self.ui.actionClear = QtWidgets.QAction(self.ui.clear_icon, "clear", self.ui.menubar)
+        self.ui.actionReconnect = QtWidgets.QAction(self.ui.reconnect_icon, "reconnect", self.ui.menubar)
+        self.recording = False
+        self.ui.menubar.addAction(self.ui.actionPlayPause)
+        self.ui.menubar.addAction(self.ui.actionClear)
+        self.ui.menubar.addAction(self.ui.actionReconnect)
+
         # Accessory Layout
         self.ui.accessoryLayout = QtWidgets.QVBoxLayout()
         self.ui.accessoryLayoutWidget = QtWidgets.QWidget()
@@ -69,7 +81,9 @@ class Main(QtWidgets.QMainWindow):
         self.ui.actionFrame_Viewer.triggered.connect(self.viewFrameViewer)
         self.ui.actionLCD.triggered.connect(self.newLCD)
         self.ui.actionPlot.triggered.connect(self.newPlot)
-        self.ui.actionMatPlot.triggered.connect(self.newMatPlot)
+        self.ui.actionPlayPause.triggered.connect(self.playPause)
+        self.ui.actionClear.triggered.connect(self.clearData)
+        self.ui.actionReconnect.triggered.connect(self.can_bus.reconnect)
 
         self.can_bus.connect()
         self.can_bus.start()
@@ -112,17 +126,12 @@ class Main(QtWidgets.QMainWindow):
 
     def newLCD(self):
         """ Adds a new LCD dashboard widget """
-        self.ui.display_widgets.append(LcdDisplay(self.can_bus.signals, self))
+        self.ui.display_widgets.append(LcdDisplay(utils.signals, self))
         self.addDashWidget(self.ui.display_widgets[-1])
 
     def newPlot(self):
         """ Adds a new Plot dashboard widget """
-        self.ui.display_widgets.append(PlotWidget(self.can_bus.signals, self))
-        self.addDashWidget(self.ui.display_widgets[-1])
-
-    def newMatPlot(self):
-        """ Ads a new matplot dashboard widget """
-        self.ui.display_widgets.append(MatPlotWidget(self.can_bus.signals, self))
+        self.ui.display_widgets.append(PlotWidget(utils.signals, self))
         self.addDashWidget(self.ui.display_widgets[-1])
 
     def addDashWidget(self, widget):
@@ -142,6 +151,18 @@ class Main(QtWidgets.QMainWindow):
         else:
             self.curr_loc[1] += 1
     
+    def playPause(self):
+        self.recording = not self.recording
+        if self.recording:
+            self.ui.actionPlayPause.setIcon(self.ui.pause_icon)
+        else:
+            self.ui.actionPlayPause.setIcon(self.ui.play_icon)
+        self.can_bus.pause(not self.recording)
+    
+    def clearData(self):
+        utils.clearDictItems(utils.signals)
+        self.can_bus.start_time = -1
+
     def closeEvent(self, event):
         """ Called on exit of main window """
         self.can_bus.connected = False
@@ -152,6 +173,8 @@ class Main(QtWidgets.QMainWindow):
 
 
 if __name__ == "__main__":
+    utils.initGlobals()
+
     config = json.load(open(CONFIG_FILE_PATH))
     app = QtWidgets.QApplication(sys.argv)
 

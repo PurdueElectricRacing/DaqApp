@@ -1,11 +1,13 @@
-from PyQt5 import QtWidgets, QtCore
+from PyQt5 import QtWidgets, QtCore, QtGui
 import can
 import usb
 import cantools
 import utils
 import time
+import threading
+import numpy as np
+import math
 
-# TODO: requirements file for python libs
 # TODO: selection for bustype: gs_usb or socket
 class CanBus(QtCore.QThread):
     """
@@ -22,6 +24,7 @@ class CanBus(QtCore.QThread):
         self.db = cantools.db.load_file(dbc_path)
 
         self.connected = False
+        self.start_time = -1
         # TODO: implement bus selection
         #self.bus_name = "Main"
 
@@ -31,8 +34,9 @@ class CanBus(QtCore.QThread):
 
         # Load Bus Signals
         self.can_config = can_config
-        self.signals = {}
         self.updateSignals(self.can_config)
+
+        self.is_paused = True
 
     def connect(self):
         """ Connects to the USB cannable """
@@ -43,12 +47,29 @@ class CanBus(QtCore.QThread):
             addr = dev.address
             del(dev)
             self.bus = can.Bus(bustype="gs_usb", channel=channel, bus=bus_num, address=addr, bitrate=500000)
+            # Empty buffer of old messages
+            while(self.bus.recv(0)): pass
             self.connected = True
+            self.connect_sig.emit(self.connected)
         else:
             self.connected = False
             utils.log_error("Failed to connect to USB Cannable")
+            self.connect_sig.emit(self.connected)
             self.connectError()
-        self.connect_sig.emit(self.connected)
+
+    def reconnect(self):
+        """ destroy usb connection, attempt to reconnect """
+        self.connected = False
+        while(not self.isFinished()):
+            # wait for bus receive to finish
+            pass
+        self.bus.shutdown()
+        usb.util.dispose_resources(self.bus.gs_usb.gs_usb)
+        del(self.bus)
+        self.connect()
+        self.start()
+        utils.clearDictItems(utils.signals)
+        self.start_time = -1
     
     def sendFormatMsg(self, msg_name, msg_data: dict):
         """ Sends a message using a dictionary of its data """
@@ -66,21 +87,28 @@ class CanBus(QtCore.QThread):
     
     def onMessageReceived(self, msg: can.Message):
         """ Emits new message signal and updates the corresponding signals """
-        self.new_msg_sig.emit(msg)
-        try:
-            dbc_msg = self.db.get_message_by_frame_id(msg.arbitration_id)
-            decode = dbc_msg.decode(msg.data)
-            for sig in decode.keys():
-                self.signals['Main'][dbc_msg.senders[0]][dbc_msg.name][sig].update(decode[sig])
-        except KeyError:
-            utils.log_warning(f"Unrecognized signal key for {msg}")
-        except ValueError:
-            #utils.log_warning(f"Failed to convert msg: {msg}")
-            pass
+        if self.start_time == -1: self.start_time = msg.timestamp
+        msg.timestamp -= self.start_time
+        self.new_msg_sig.emit(msg) # TODO: only emit signal if DAQ msg for daq_protocol, currently receives all msgs (low priority performance improvement)
+        if not self.is_paused:
+            try:
+                dbc_msg = self.db.get_message_by_frame_id(msg.arbitration_id)
+                decode = dbc_msg.decode(msg.data)
+                for sig in decode.keys():
+                    utils.signals['Main'][dbc_msg.senders[0]][dbc_msg.name][sig].update(decode[sig], msg.timestamp)
+            except KeyError:
+                utils.log_warning(f"Unrecognized signal key for {msg}")
+                pass
+            except ValueError:
+                #utils.log_warning(f"Failed to convert msg: {msg}")
+                pass
 
         # bus load estimation
         msg_bit_length_max = 64 + msg.dlc * 8 + 18 
         self.total_bits += msg_bit_length_max
+
+    def pause(self, pause: bool):
+        self.is_paused = pause
 
     def connectError(self):
         """ Creates message box prompting to try to reconnect """
@@ -95,30 +123,38 @@ class CanBus(QtCore.QThread):
 
     def updateSignals(self, can_config: dict):
         """ Creates dictionary of BusSignals of all signals in can_config """
-        self.signals.clear()
+        utils.signals.clear()
         for bus in can_config['busses']:
-            self.signals[bus['bus_name']] = {}
+            utils.signals[bus['bus_name']] = {}
             for node in bus['nodes']:
-                self.signals[bus['bus_name']][node['node_name']] = {}
+                utils.signals[bus['bus_name']][node['node_name']] = {}
                 for msg in node['tx']:
-                    self.signals[bus['bus_name']][node['node_name']][msg['msg_name']] = {}
+                    utils.signals[bus['bus_name']][node['node_name']][msg['msg_name']] = {}
                     for signal in msg['signals']:
-                        self.signals[bus['bus_name']][node['node_name']] \
+                        utils.signals[bus['bus_name']][node['node_name']] \
                                     [msg['msg_name']][signal['sig_name']]\
                                     = BusSignal(bus['bus_name'], node['node_name'],
-                                                msg['msg_name'], signal['sig_name'])
+                                                msg['msg_name'], signal['sig_name'], np.dtype('<u'+str(math.ceil(signal['length']/8))))
 
     def run(self):
         """ Thread loop to receive can messages """
         self.last_estimate_time = time.time()
+        loop_count = 0
+        skips =0
+        avg_process_time = 0
 
         while self.connected:
             # TODO: detect when not connected (add with catching send error)
             #       would the connected variable need to be locked?
             msg = self.bus.recv(0.25)
             if msg:
+                delta = time.perf_counter()
                 self.onMessageReceived(msg)
-            
+                avg_process_time += time.perf_counter() - delta
+            else:
+                skips += 1
+
+            loop_count += 1
             # Bus load estimation
             if (time.time() - self.last_estimate_time) > 1:
                 self.last_estimate_time = time.time()
@@ -126,29 +162,68 @@ class CanBus(QtCore.QThread):
                 self.total_bits = 0
                 self.bus_load_sig.emit(bus_load)
 
+                if loop_count != 0 and loop_count-skips != 0: print(f"rx period (ms): {1/loop_count*1000}, skipped: {skips}, process time (ms): {avg_process_time / (loop_count-skips)*1000}")
+                loop_count = 0
+                avg_process_time = 0
+                skips = 0
+
 
 class BusSignal(QtCore.QObject):
     """ Signal that can be subscribed (connected) to for updates """
 
     update_sig = QtCore.pyqtSignal()
+    history = 240000 # for 0.015s update period 1 hour of data
+    data_lock = threading.Lock()
 
-    def __init__(self, bus_name, node_name, message_name, signal_name):
+    def __init__(self, bus_name, node_name, message_name, signal_name, d_type):
         super(BusSignal, self).__init__()
         self.bus_name = bus_name
         self.node_name = node_name
         self.message_name = message_name
         self.signal_name = signal_name
-        self.curr_val = 0
-        self.last_update_time = 0
+        self.next_idx = 0
+        self.data  = np.zeros(self.history, dtype=d_type)
+        self.times = np.zeros(self.history, np.float)
+        self.color = QtGui.QColor(255, 255, 255)
 
     def connect(self, func: 'function'):
+        """ call func each time signal updated """
         self.update_sig.connect(func)
 
-    def disconnect(self):
-        # TODO: don't disconnect all, only the one that wants to
-        self.update_sig.disconnect()
+    def disconnect(self, func: 'function'):
+        """ stop calling func on signal update """
+        self.update_sig.disconnect(func)
 
-    def update(self, val):
-        self.curr_val = val
-        self.last_update_time = time.time()
+    def update(self, val, timestamp):
+        """ update the value of the signal """
+        with self.data_lock:
+            if self.next_idx >= self.history:
+                utils.log_warning(f"{self.signal_name} out of space, resetting!")
+                self.clear()
+            self.data[self.next_idx] = val
+            self.times[self.next_idx] = timestamp
+            self.next_idx += 1
+            # limit array size
+            #self.data  = self.data[-self.history:]
+            #self.times = self.times[-self.history:]
         self.update_sig.emit()
+
+    def clear(self):
+        with self.data_lock:
+            self.next_idx = 0
+            self.data.fill(0)
+            self.times.fill(0)
+
+    @property
+    def curr_val(self):
+        with self.data_lock:
+            return self.data[self.next_idx - 1]
+
+    @property
+    def last_update_time(self):
+        with self.data_lock:
+            return self.times[self.next_idx - 1]
+    
+    @property
+    def length(self):
+        return self.next_idx

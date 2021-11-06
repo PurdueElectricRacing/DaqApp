@@ -8,7 +8,7 @@ class LcdDisplay(WidgetDisplay):
     """ LCD Display Widget """
 
     def __init__(self, signals: dict, parent=None):
-        super(LcdDisplay, self).__init__(signals, parent)
+        super(LcdDisplay, self).__init__(signals, labels=['Signal'], parent=parent)
 
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
@@ -31,8 +31,9 @@ class LcdDisplay(WidgetDisplay):
 
     def updateDisplay(self):
         """ Called each time signal value updated """
-        self.lcd.display(self.current_signal.curr_val)
+        self.lcd.display(self.current_signals[0].curr_val)
     
-    def signalChanged(self):
+    def signalsChanged(self):
         """ Changes signal name label """
-        self.title.setText(self.current_signal.signal_name)
+        self.title.setText(self.current_signals[0].signal_name)
+        self.lcd.setStyleSheet(f"color: {self.current_signals[0].color.name()}; border: {self.current_signals[0].color.name()};")

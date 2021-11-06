@@ -56,7 +56,6 @@
     </property>
     <addaction name="actionLCD"/>
     <addaction name="actionPlot"/>
-    <addaction name="actionMatPlot"/>
    </widget>
    <addaction name="menuEdit"/>
    <addaction name="menuView"/>

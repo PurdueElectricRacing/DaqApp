@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>246</width>
-    <height>227</height>
+    <height>262</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -29,6 +29,13 @@
    </item>
    <item>
     <widget class="QListWidget" name="signalList"/>
+   </item>
+   <item>
+    <widget class="QPushButton" name="colorButton">
+     <property name="text">
+      <string>Color</string>
+     </property>
+    </widget>
    </item>
    <item>
     <widget class="QPushButton" name="selectButton">

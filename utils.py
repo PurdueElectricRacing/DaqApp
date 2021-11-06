@@ -2,6 +2,11 @@ import json
 from jsonschema import validate
 from jsonschema.exceptions import ValidationError
 
+# Global Variables
+def initGlobals():
+    global signals
+    signals = {}
+
 # Logging helper functions
 class bcolors:
     HEADER = '\033[95m'
@@ -41,3 +46,10 @@ def load_json_config(config_path, schema_path):
 
     return config
 
+def clearDictItems(dictionary:dict):
+    """ recursively calls clear on items in multidimensional dict"""
+    for key, value in dictionary.items():
+        if type(value) is dict:
+            clearDictItems(value)
+        else:
+            value.clear()

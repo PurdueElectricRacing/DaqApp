@@ -67,7 +67,6 @@ class Ui_MainWindow(object):
         self.menuView.addAction(self.actionFrame_Viewer)
         self.menuEdit.addAction(self.actionLCD)
         self.menuEdit.addAction(self.actionPlot)
-        self.menuEdit.addAction(self.actionMatPlot)
         self.menubar.addAction(self.menuEdit.menuAction())
         self.menubar.addAction(self.menuView.menuAction())
         self.menubar.addAction(self.menuHelp.menuAction())

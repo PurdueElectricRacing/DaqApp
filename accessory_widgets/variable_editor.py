@@ -1,6 +1,7 @@
 from PyQt5 import QtWidgets
 from ui.variableEditor import Ui_variableEditor
 from communication.daq_protocol import DaqProtocol
+import utils
 
 # TODO: detect unsaved changes (prevent confusion of thinking save also writes)
 class VariableEditor(QtWidgets.QWidget):
@@ -21,16 +22,20 @@ class VariableEditor(QtWidgets.QWidget):
         self.ui.saveButton.clicked.connect(self.saveButtonClicked)
         self.ui.loadButton.clicked.connect(self.loadButtonClicked)
         self.ui.nodeSelector.currentIndexChanged.connect(self.updateVarList)
+        self.ui.startPubButton.clicked.connect(self.startPubButtonClicked)
+        self.ui.stopPubButton.clicked.connect(self.stopPubButtonClicked)
 
         # Disable buttons
         self.ui.readButton.setDisabled(True)
         self.ui.writeButton.setDisabled(True)
         self.ui.saveButton.setDisabled(True)
         self.ui.loadButton.setDisabled(True)
+        self.ui.startPubButton.setDisabled(True)
+        self.ui.stopPubButton.setDisabled(True)
 
         # Add nodes to node selector
         self.ui.nodeSelector.clear()
-        self.ui.nodeSelector.addItems(self.daq_protocol.variables['Main'].keys())
+        self.ui.nodeSelector.addItems(utils.signals['Main'].keys())
 
         self.curr_var = None
         self.save_in_prog = False 
@@ -40,10 +45,12 @@ class VariableEditor(QtWidgets.QWidget):
         """ Subscribes to receive updates of the current variable """
         self.ui.selectLbl.setText(f"Editing \"{item.text()}\".")
         self.ui.currValDisp.setText("")
-        if self.curr_var: self.curr_var.disconnect()
-        self.curr_var = self.daq_protocol.variables['Main'][self.ui.nodeSelector.currentText()][
-                                          self.ui.variableList.currentRow()]
+        if self.curr_var: self.curr_var.disconnect(self.handleReceive)
+        self.curr_var = utils.signals['Main'][self.ui.nodeSelector.currentText()][f"daq_response_{self.ui.nodeSelector.currentText().upper()}"][
+                                          self.ui.variableList.currentItem().text()]
         self.curr_var.connect(self.handleReceive)
+
+        self.ui.pubPeriodDisp.setText(str(self.curr_var.pub_period_ms))
 
         self.changes_unsaved = False
         self.handleSaveProgress(self.save_in_prog)
@@ -52,6 +59,8 @@ class VariableEditor(QtWidgets.QWidget):
         self.ui.writeButton.setDisabled(self.curr_var.read_only)
         self.ui.saveButton.setDisabled(not self.curr_var.eeprom_enabled)
         self.ui.loadButton.setDisabled(self.save_in_prog or not self.curr_var.eeprom_enabled or self.curr_var.read_only)
+        self.ui.startPubButton.setDisabled(False)
+        self.ui.stopPubButton.setDisabled(False)
     
     def varDoubleClicked(self, item):
         """ Selects and reads from variable """
@@ -61,7 +70,7 @@ class VariableEditor(QtWidgets.QWidget):
     def updateVarList(self, idx):
         """ Updates the listed variables based on the selected node """
         self.ui.variableList.clear()
-        self.ui.variableList.addItems([var[1].name for var in self.daq_protocol.variables['Main'][self.ui.nodeSelector.currentText()].items()])
+        self.ui.variableList.addItems([var[1].signal_name for var in utils.signals['Main'][self.ui.nodeSelector.currentText()][f"daq_response_{self.ui.nodeSelector.currentText().upper()}"].items()])
     
     def readButtonClicked(self):
         """ Requests a variable read operation """
@@ -102,6 +111,22 @@ class VariableEditor(QtWidgets.QWidget):
             self.ui.currValDisp.setText(prev_text + " (previous)")
 
         self.daq_protocol.loadVar(self.curr_var)
+    
+    def startPubButtonClicked(self):
+        """ Requests a variable publish operation """
+        try:
+            period = int(self.ui.pubPeriodDisp.text())
+        except ValueError:
+            QtWidgets.QMessageBox.critical(self, "Pub Error", "Pub failed. Please enter an integer")
+            return
+        if period < 0 or period > 255 * 15:
+            self.ui.newValDisp.setText(str(period) + f" <- out of range (max: {255 * 15} ms)")
+            return
+        self.daq_protocol.pubVar(self.curr_var, period)
+    
+    def stopPubButtonClicked(self):
+        self.ui.pubPeriodDisp.setText("0")
+        self.daq_protocol.pubVarStop(self.curr_var)
 
     def handleReceive(self):
         """ Updates the current value displayed when the subscribed variable is updated """

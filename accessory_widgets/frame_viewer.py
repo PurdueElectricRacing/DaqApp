@@ -13,7 +13,7 @@ class FrameViewer(QtWidgets.QWidget):
 
         # Configure Horizontal Headers
         self.ui.msgTable.setColumnCount(7)
-        self.ui.msgTable.setHorizontalHeaderLabels(["Timestamp", "Rx/Tx","ID","Sender","Name","DLC","Data"])
+        self.ui.msgTable.setHorizontalHeaderLabels(["Time Delta", "Rx/Tx","ID","Sender","Name","DLC","Data"])
         header = self.ui.msgTable.horizontalHeader()
         header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
         header.setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeToContents)
@@ -56,7 +56,6 @@ class FrameViewer(QtWidgets.QWidget):
         row_idx = self.row_ids.index(msg.arbitration_id)
 
         # Organize row data
-        self.row_times[row_idx] = msg.timestamp
         row = [
             f"{(msg.timestamp - self.row_times[row_idx]):.4f}",
             "Rx" if msg.is_rx else "Tx",
@@ -66,6 +65,7 @@ class FrameViewer(QtWidgets.QWidget):
             str(msg.dlc),
             data
         ]
+        self.row_times[row_idx] = msg.timestamp
         # Add row entries column by column
         for n, item in enumerate(row):
             self.ui.msgTable.setItem(row_idx, n, QtWidgets.QTableWidgetItem(item))

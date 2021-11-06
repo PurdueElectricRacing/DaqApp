@@ -14,7 +14,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_signalPicker(object):
     def setupUi(self, signalPicker):
         signalPicker.setObjectName("signalPicker")
-        signalPicker.resize(246, 227)
+        signalPicker.resize(246, 262)
         self.verticalLayout = QtWidgets.QVBoxLayout(signalPicker)
         self.verticalLayout.setObjectName("verticalLayout")
         self.label = QtWidgets.QLabel(signalPicker)
@@ -29,6 +29,9 @@ class Ui_signalPicker(object):
         self.signalList = QtWidgets.QListWidget(signalPicker)
         self.signalList.setObjectName("signalList")
         self.verticalLayout.addWidget(self.signalList)
+        self.colorButton = QtWidgets.QPushButton(signalPicker)
+        self.colorButton.setObjectName("colorButton")
+        self.verticalLayout.addWidget(self.colorButton)
         self.selectButton = QtWidgets.QPushButton(signalPicker)
         self.selectButton.setObjectName("selectButton")
         self.verticalLayout.addWidget(self.selectButton)
@@ -40,4 +43,5 @@ class Ui_signalPicker(object):
         _translate = QtCore.QCoreApplication.translate
         signalPicker.setWindowTitle(_translate("signalPicker", "Signal Picker"))
         self.label.setText(_translate("signalPicker", "Choose a Signal to Display"))
+        self.colorButton.setText(_translate("signalPicker", "Color"))
         self.selectButton.setText(_translate("signalPicker", "Select"))
