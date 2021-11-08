@@ -6,6 +6,8 @@ from jsonschema.exceptions import ValidationError
 def initGlobals():
     global signals
     signals = {}
+    global plot_x_range_sec
+    plot_x_range_sec = 10
 
 # Logging helper functions
 class bcolors:

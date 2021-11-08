@@ -138,10 +138,10 @@ class DaqProtocol(QtCore.QObject):
             if cmd == DAQ_RPLY_READ or cmd == DAQ_RPLY_PUB:
                 id = (data >> curr_bit) & DAQ_ID_MASK
                 curr_bit += DAQ_ID_LENGTH
+                var = list(utils.signals['Main'][node_name][dbc_msg.name].values())[id]
                 if not (cmd == DAQ_RPLY_PUB and self.can_bus.is_paused):
-                    var = list(utils.signals['Main'][node_name][dbc_msg.name].values())[id]
-                    var.update((data >> curr_bit) & ~(0x1 << var.bit_length), msg.timestamp)
-                    curr_bit += var.bit_length
+                    var.update((data >> curr_bit) & ~(0xFFFFFFFFFFFFFFFF << var.bit_length), msg.timestamp)
+                curr_bit += var.bit_length
             elif cmd == DAQ_RPLY_SAVE:
                 id = (data >> curr_bit) & DAQ_ID_MASK
                 curr_bit += DAQ_ID_LENGTH

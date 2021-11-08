@@ -56,7 +56,16 @@
     </property>
     <addaction name="actionLCD"/>
     <addaction name="actionPlot"/>
+    <addaction name="separator"/>
+    <addaction name="actionRemoveWidget"/>
    </widget>
+   <widget class="QMenu" name="menuEdit_2">
+    <property name="title">
+     <string>Edit</string>
+    </property>
+    <addaction name="actionPreferences"/>
+   </widget>
+   <addaction name="menuEdit_2"/>
    <addaction name="menuEdit"/>
    <addaction name="menuView"/>
    <addaction name="menuHelp"/>
@@ -110,6 +119,16 @@
   <action name="actionMatPlot">
    <property name="text">
     <string>MatPlot</string>
+   </property>
+  </action>
+  <action name="actionRemoveWidget">
+   <property name="text">
+    <string>Remove</string>
+   </property>
+  </action>
+  <action name="actionPreferences">
+   <property name="text">
+    <string>Preferences</string>
    </property>
   </action>
  </widget>

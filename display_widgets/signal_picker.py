@@ -42,6 +42,7 @@ class SignalPicker(QtWidgets.QDialog):
             pass
     
     def getColor(self):
+        """ Prompts user to select a color for the signal """
         self.color = QtWidgets.QColorDialog.getColor()
         self.ui.colorButton.setStyleSheet(f"background-color: {self.color.name()}")
 
@@ -65,6 +66,7 @@ class SignalPicker(QtWidgets.QDialog):
         return picker.chosen_signal
     
 class MultiSignalPicker(QtWidgets.QDialog):
+    """ Used to pick multiple signals to correspond to defined labels """
 
     def __init__(self, signals:dict, labels, current_signals, requires_all=False, parent=None):
         super(MultiSignalPicker, self).__init__(parent)
@@ -103,28 +105,31 @@ class MultiSignalPicker(QtWidgets.QDialog):
         self.selectButton.clicked.connect(self.select)
     
     def buttonClicked(self, idx):
-        print(idx)
+        """ Callback for signal select button, prompt signal selection """
         signal = SignalPicker.getSignal(self.signals, self)
         if not signal: return
         if len(self.current_signals) <= idx: self.current_signals.append(signal)
         else: self.current_signals[idx] = signal
 
+        # Update button to match selected signal
         self.button_objects[idx].setText(signal.signal_name)
         self.button_objects[idx].setStyleSheet(f"background-color: {signal.color.name()}")
         if idx+1 < len(self.button_objects): self.button_objects[idx+1].setDisabled(False)
 
     def makeCallButtonClicked(self, idx):
-        """ function factory :( """
+        """ function factory :(, allows for all signal buttons to use same callback """
         def callButtonClicked():
             self.buttonClicked(idx)
         return callButtonClicked
     
     def select(self):
+        """ checks if selection requirements met and closes dialog """
         if not self.requires_all or len(self.signals) == len(self.labels):
             self.accept()
     
     @staticmethod
     def getSignals(signals, labels, current_signals, requires_all=False, parent=None):
+        """ Prompts user to select signals to correspond to predefined labels """
         multiPicker = MultiSignalPicker(signals, labels, current_signals, requires_all=requires_all, parent=parent)
         multiPicker.exec_()
         return multiPicker.current_signals

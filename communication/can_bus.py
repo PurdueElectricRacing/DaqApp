@@ -98,7 +98,6 @@ class CanBus(QtCore.QThread):
                     utils.signals['Main'][dbc_msg.senders[0]][dbc_msg.name][sig].update(decode[sig], msg.timestamp)
             except KeyError:
                 utils.log_warning(f"Unrecognized signal key for {msg}")
-                pass
             except ValueError:
                 #utils.log_warning(f"Failed to convert msg: {msg}")
                 pass
@@ -108,6 +107,7 @@ class CanBus(QtCore.QThread):
         self.total_bits += msg_bit_length_max
 
     def pause(self, pause: bool):
+        """ pauses the recording of signal values, passes through read requests """
         self.is_paused = pause
 
     def connectError(self):
@@ -203,12 +203,10 @@ class BusSignal(QtCore.QObject):
             self.data[self.next_idx] = val
             self.times[self.next_idx] = timestamp
             self.next_idx += 1
-            # limit array size
-            #self.data  = self.data[-self.history:]
-            #self.times = self.times[-self.history:]
         self.update_sig.emit()
 
     def clear(self):
+        """ clears stored signal values """
         with self.data_lock:
             self.next_idx = 0
             self.data.fill(0)
@@ -216,14 +214,17 @@ class BusSignal(QtCore.QObject):
 
     @property
     def curr_val(self):
+        """ last value recorded """
         with self.data_lock:
             return self.data[self.next_idx - 1]
 
     @property
     def last_update_time(self):
+        """ timestamp of last value recorded """
         with self.data_lock:
             return self.times[self.next_idx - 1]
     
     @property
     def length(self):
+        """ number of recorded values """
         return self.next_idx

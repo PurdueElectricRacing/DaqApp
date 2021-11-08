@@ -1,10 +1,14 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
+from pyqtgraph import plot
 from accessory_widgets.frame_viewer import FrameViewer
+from accessory_widgets.preferences_editor import PreferencesEditor
 from accessory_widgets.variable_editor import VariableEditor
 from display_widgets.plot_widget import PlotWidget
+from display_widgets import plot_widget
 from communication.can_bus import CanBus
 from communication.daq_protocol import DaqProtocol
 from display_widgets.lcd_widget import LcdDisplay
+from display_widgets.widget_deleter import WidgetDeleter
 from ui.mainWindow import Ui_MainWindow
 import qdarkstyle
 import utils
@@ -81,6 +85,8 @@ class Main(QtWidgets.QMainWindow):
         self.ui.actionFrame_Viewer.triggered.connect(self.viewFrameViewer)
         self.ui.actionLCD.triggered.connect(self.newLCD)
         self.ui.actionPlot.triggered.connect(self.newPlot)
+        self.ui.actionRemoveWidget.triggered.connect(self.removeDisplayWidget)
+        self.ui.actionPreferences.triggered.connect(lambda : PreferencesEditor.editPreferences(self))
         self.ui.actionPlayPause.triggered.connect(self.playPause)
         self.ui.actionClear.triggered.connect(self.clearData)
         self.ui.actionReconnect.triggered.connect(self.can_bus.reconnect)
@@ -88,8 +94,6 @@ class Main(QtWidgets.QMainWindow):
         self.can_bus.connect()
         self.can_bus.start()
         self.show()
-        # TODO: edit widget properties and grid locations with double click
-        # TODO: be able to remove widget
     
     def updateConnectionStatus(self, connected: bool):
         """ Updates the connection status label when connect status changes """
@@ -150,8 +154,29 @@ class Main(QtWidgets.QMainWindow):
                 self.max_rows += 1
         else:
             self.curr_loc[1] += 1
-    
+
+    def removeDisplayWidget(self):
+        """ removes a display widget and resets the grid locations """
+        for w in self.ui.display_widgets:
+            self.ui.dashboardLayout.removeWidget(w)
+        widgets_to_delete = WidgetDeleter.getWidgets(self.ui.display_widgets)        
+        for w in widgets_to_delete:
+            w.destroy()
+            self.ui.display_widgets.remove(w)
+        # Reset axis link (in case the plot that all the
+        #                  axes were linked to was deleted)
+        plot_widget.view_box_link = None
+        for w in self.ui.display_widgets:
+            w.signalsChanged()
+        # redo grid layout
+        self.curr_loc = [0, 0]
+        self.max_rows = 1
+        self.max_cols = 1
+        for w in self.ui.display_widgets:
+            self.addDashWidget(w)
+
     def playPause(self):
+        """ Start recording signal values """
         self.recording = not self.recording
         if self.recording:
             self.ui.actionPlayPause.setIcon(self.ui.pause_icon)
@@ -160,6 +185,7 @@ class Main(QtWidgets.QMainWindow):
         self.can_bus.pause(not self.recording)
     
     def clearData(self):
+        """ Clears recorded signal values """
         utils.clearDictItems(utils.signals)
         self.can_bus.start_time = -1
 

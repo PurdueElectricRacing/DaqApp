@@ -12,13 +12,15 @@ class WidgetDisplay(QtWidgets.QWidget):
         super(WidgetDisplay, self).__init__(parent)
 
     def updateDisplay(self):
+        """ Called each time signal is updated"""
         pass
 
     def signalsChanged(self):
+        """ Called on a signal change """
         pass
 
     def mouseDoubleClickEvent(self, a0: QtGui.QMouseEvent):
-
+        """ Prompts widget configuration to select signals """
         # disconnect from existing signals
         for signal in self.current_signals:
             signal.disconnect(self.updateDisplay)
@@ -28,7 +30,6 @@ class WidgetDisplay(QtWidgets.QWidget):
         # Don't do anything if you didn't pick anything
         if len(signals) == 0: return
 
-        
         self.current_signals = signals
 
         for signal in self.current_signals:

@@ -125,6 +125,7 @@ class VariableEditor(QtWidgets.QWidget):
         self.daq_protocol.pubVar(self.curr_var, period)
     
     def stopPubButtonClicked(self):
+        """ Requests a stop publish operation """
         self.ui.pubPeriodDisp.setText("0")
         self.daq_protocol.pubVarStop(self.curr_var)
 
