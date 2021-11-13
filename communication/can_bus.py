@@ -2,6 +2,8 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 import can
 import usb
 import cantools
+from communication.client import TCPBus
+from communication.connection_error_dialog import ConnectionErrorDialog
 import utils
 import time
 import threading
@@ -38,8 +40,13 @@ class CanBus(QtCore.QThread):
 
         self.is_paused = True
 
+        self.port = 8080
+        self.ip = '169.254.48.90'
+        self.is_wireless = False
+    
     def connect(self):
-        """ Connects to the USB cannable """
+        """ Connects to the bus """
+        # Attempt usb connection first
         dev = usb.core.find(idVendor=0x1D50, idProduct=0x606F)
         if dev:
             channel = dev.product
@@ -50,12 +57,24 @@ class CanBus(QtCore.QThread):
             # Empty buffer of old messages
             while(self.bus.recv(0)): pass
             self.connected = True
+            self.is_wireless = False
             self.connect_sig.emit(self.connected)
-        else:
-            self.connected = False
-            utils.log_error("Failed to connect to USB Cannable")
+            return
+
+        # Usb failed, trying tcp
+        try:
+            self.bus = TCPBus(self.ip, self.port)
+            self.connected = True
+            self.is_wireless = True
             self.connect_sig.emit(self.connected)
-            self.connectError()
+            return
+        except OSError:
+            pass # failed to connect
+
+        self.connected = False
+        utils.log_error("Failed to connect to a bus")
+        self.connect_sig.emit(self.connected)
+        self.connectError()
 
     def reconnect(self):
         """ destroy usb connection, attempt to reconnect """
@@ -64,7 +83,7 @@ class CanBus(QtCore.QThread):
             # wait for bus receive to finish
             pass
         self.bus.shutdown()
-        usb.util.dispose_resources(self.bus.gs_usb.gs_usb)
+        if not self.is_wireless: usb.util.dispose_resources(self.bus.gs_usb.gs_usb)
         del(self.bus)
         self.connect()
         self.start()
@@ -112,14 +131,9 @@ class CanBus(QtCore.QThread):
 
     def connectError(self):
         """ Creates message box prompting to try to reconnect """
-        msgBox = QtWidgets.QMessageBox(self.parent())
-        msgBox.setIcon(QtWidgets.QMessageBox.Critical)
-        msgBox.setText("Failed to connect to USB Cannable")
-        msgBox.setWindowTitle("Connection Error")
-        msgBox.setStandardButtons(QtWidgets.QMessageBox.Retry | QtWidgets.QMessageBox.Cancel)
-        msgBox.buttons()[0].clicked.connect(self.connect)
-        msgBox.buttons()[1].clicked.connect(quit)
-        msgBox.exec_()
+        self.ip = ConnectionErrorDialog.connectionError(self.ip)
+        self.connect()
+
 
     def updateSignals(self, can_config: dict):
         """ Creates dictionary of BusSignals of all signals in can_config """
@@ -166,6 +180,7 @@ class CanBus(QtCore.QThread):
                 loop_count = 0
                 avg_process_time = 0
                 skips = 0
+        self.bus.shutdown()
 
 
 class BusSignal(QtCore.QObject):

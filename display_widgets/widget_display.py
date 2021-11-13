@@ -37,4 +37,5 @@ class WidgetDisplay(QtWidgets.QWidget):
             signal.connect(self.updateDisplay)
 
         self.signalsChanged()
+        self.updateDisplay()
         return super().mouseDoubleClickEvent(a0)
