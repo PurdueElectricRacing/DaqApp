@@ -49,6 +49,7 @@
     </property>
     <addaction name="actionVariable_Editor"/>
     <addaction name="actionFrame_Viewer"/>
+    <addaction name="actionLog_Exporter"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -129,6 +130,14 @@
   <action name="actionPreferences">
    <property name="text">
     <string>Preferences</string>
+   </property>
+  </action>
+  <action name="actionLog_Exporter">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Log Exporter</string>
    </property>
   </action>
  </widget>

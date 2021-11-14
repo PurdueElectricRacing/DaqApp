@@ -1,5 +1,6 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
 from accessory_widgets.frame_viewer import FrameViewer
+from accessory_widgets.log_export import LogExporter
 from accessory_widgets.preferences_editor import PreferencesEditor
 from accessory_widgets.variable_editor import VariableEditor
 from display_widgets.plot_widget import PlotWidget
@@ -61,6 +62,7 @@ class Main(QtWidgets.QMainWindow):
         self.ui.varEdit = VariableEditor(self.daq_protocol, self.ui.centralwidget)
         self.ui.accessoryLayout.addWidget(self.ui.varEdit)
         self.ui.frameViewer = FrameViewer(self.can_bus)
+        self.ui.logExporter = LogExporter(self.can_bus)
 
         # Dashboard Layout
         self.ui.dashboardLayout = QtWidgets.QGridLayout()
@@ -82,6 +84,7 @@ class Main(QtWidgets.QMainWindow):
         # Menu Action Connections
         self.ui.actionVariable_Editor.triggered.connect(self.viewVariableEditor)
         self.ui.actionFrame_Viewer.triggered.connect(self.viewFrameViewer)
+        self.ui.actionLog_Exporter.triggered.connect(self.viewLogExporter)
         self.ui.actionLCD.triggered.connect(self.newLCD)
         self.ui.actionPlot.triggered.connect(self.newPlot)
         self.ui.actionRemoveWidget.triggered.connect(self.removeDisplayWidget)
@@ -126,6 +129,15 @@ class Main(QtWidgets.QMainWindow):
         else:
             self.ui.accessoryLayout.removeWidget(self.ui.frameViewer)
             self.ui.frameViewer.hide()
+    
+    def viewLogExporter(self, is_visible: bool):
+        """ Hides or shows the log exporter"""
+        if is_visible:
+            self.ui.accessoryLayout.addWidget(self.ui.logExporter)
+            self.ui.logExporter.show()
+        else:
+            self.ui.accessoryLayout.removeWidget(self.ui.logExporter)
+            self.ui.logExporter.hide()
 
     def newLCD(self):
         """ Adds a new LCD dashboard widget """

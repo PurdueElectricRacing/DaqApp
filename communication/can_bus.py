@@ -1,4 +1,5 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
+from datetime import datetime
 import can
 import usb
 import cantools
@@ -27,6 +28,7 @@ class CanBus(QtCore.QThread):
 
         self.connected = False
         self.start_time = -1
+        self.start_date_time_str = ""
         # TODO: implement bus selection
         #self.bus_name = "Main"
 
@@ -43,6 +45,7 @@ class CanBus(QtCore.QThread):
         self.port = 8080
         self.ip = '169.254.48.90'
         self.is_wireless = False
+
     
     def connect(self):
         """ Connects to the bus """
@@ -89,6 +92,7 @@ class CanBus(QtCore.QThread):
         self.start()
         utils.clearDictItems(utils.signals)
         self.start_time = -1
+        self.start_date_time_str = datetime.now().strftime("%m-%d-%Y %H:%M:%S")
     
     def sendFormatMsg(self, msg_name, msg_data: dict):
         """ Sends a message using a dictionary of its data """
@@ -106,7 +110,9 @@ class CanBus(QtCore.QThread):
     
     def onMessageReceived(self, msg: can.Message):
         """ Emits new message signal and updates the corresponding signals """
-        if self.start_time == -1: self.start_time = msg.timestamp
+        if self.start_time == -1: 
+            self.start_time = msg.timestamp
+            self.start_date_time_str = datetime.now().strftime("%m-%d-%Y %H:%M:%S")
         msg.timestamp -= self.start_time
         self.new_msg_sig.emit(msg) # TODO: only emit signal if DAQ msg for daq_protocol, currently receives all msgs (low priority performance improvement)
         if not self.is_paused:
@@ -198,7 +204,7 @@ class BusSignal(QtCore.QObject):
         self.signal_name = signal_name
         self.next_idx = 0
         self.data  = np.zeros(self.history, dtype=d_type)
-        self.times = np.zeros(self.history, np.float)
+        self.times = np.zeros(self.history, dtype=np.float)
         self.color = QtGui.QColor(255, 255, 255)
 
     def connect(self, func: 'function'):
