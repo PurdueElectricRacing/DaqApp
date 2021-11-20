@@ -66,6 +66,13 @@
     </property>
     <addaction name="actionPreferences"/>
    </widget>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionImport_log"/>
+   </widget>
+   <addaction name="menuFile"/>
    <addaction name="menuEdit_2"/>
    <addaction name="menuEdit"/>
    <addaction name="menuView"/>
@@ -138,6 +145,11 @@
    </property>
    <property name="text">
     <string>Log Exporter</string>
+   </property>
+  </action>
+  <action name="actionImport_log">
+   <property name="text">
+    <string>Import Log</string>
    </property>
   </action>
  </widget>

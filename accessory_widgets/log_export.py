@@ -1,4 +1,3 @@
-from platform import node
 from PyQt5 import QtWidgets
 from PyQt5.Qt import Qt
 from communication.can_bus import BusSignal, CanBus
@@ -20,6 +19,7 @@ class LogExporter(QtWidgets.QWidget):
 
         # Signal connections
         self.ui.saveButton.clicked.connect(self.saveLog)
+        self.ui.formatSelectCombo.currentIndexChanged.connect(self.formatChanged)
     
         # Populate with items
         for bus in utils.signals:
@@ -45,8 +45,16 @@ class LogExporter(QtWidgets.QWidget):
         self.checked_sigs = []
         self.export_array = np.array([])
         self.header = ""
-        self.bin_size = 0.015
+        self.bin_size = 15
 
+        self.ui.binSizeSpin.setValue(self.bin_size)
+        self.ui.binSizeSpin.hide()
+    
+    def formatChanged(self):
+        if self.ui.formatSelectCombo.currentText() == EXPORT_BINNED:
+            self.ui.binSizeSpin.show()
+        else:
+            self.ui.binSizeSpin.hide()
     
     def saveLog(self):
         # extract checked signals
@@ -117,8 +125,8 @@ class LogExporter(QtWidgets.QWidget):
                 else:
                     signal_time_array = sig_chunk
 
-        # TODO: configurable bin size
-        bins = np.arange(signal_time_array[:,0].astype(np.float).min(), signal_time_array[:, 0].astype(np.float).max()+self.bin_size, self.bin_size)
+        self.bin_size = self.ui.binSizeSpin.value()
+        bins = np.arange(signal_time_array[:,0].astype(np.float).min(), signal_time_array[:, 0].astype(np.float).max()+self.bin_size/1000.0, self.bin_size/1000.0)
 
         # index of the bin each row belongs to
         bin_locs = np.digitize(signal_time_array[:,0].astype(np.float), bins)

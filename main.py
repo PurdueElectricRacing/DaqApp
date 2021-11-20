@@ -1,6 +1,7 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
 from accessory_widgets.frame_viewer import FrameViewer
 from accessory_widgets.log_export import LogExporter
+from accessory_widgets.log_import import LogImporter
 from accessory_widgets.preferences_editor import PreferencesEditor
 from accessory_widgets.variable_editor import VariableEditor
 from display_widgets.plot_widget import PlotWidget
@@ -14,8 +15,15 @@ import qdarkstyle
 import utils
 import json
 import sys
+import os
 
-CONFIG_FILE_PATH = "./dashboard.json"
+if getattr(sys, 'frozen', False):
+    CurrentPath = sys._MEIPASS
+else:
+    CurrentPath = os.path.dirname(__file__)
+
+#CONFIG_FILE_PATH = os.path.join(CurrentPath, "dashboard.json")
+CONFIG_FILE_PATH = os.path.join(os.getcwd(), "dashboard.json")
 
 class Main(QtWidgets.QMainWindow):
 
@@ -82,6 +90,7 @@ class Main(QtWidgets.QMainWindow):
         self.max_cols = 1
 
         # Menu Action Connections
+        self.ui.actionImport_log.triggered.connect(lambda : LogImporter.importLog(self.can_bus, self))
         self.ui.actionVariable_Editor.triggered.connect(self.viewVariableEditor)
         self.ui.actionFrame_Viewer.triggered.connect(self.viewFrameViewer)
         self.ui.actionLog_Exporter.triggered.connect(self.viewLogExporter)
@@ -217,7 +226,7 @@ if __name__ == "__main__":
 
     # Style Configuration
     app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
-    app.setWindowIcon(QtGui.QIcon('./ui/logo.png'))
+    app.setWindowIcon(QtGui.QIcon(os.path.join(CurrentPath, "ui/logo.png")))
 
     window = Main(config)
     app.exec_()

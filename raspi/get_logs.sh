@@ -1,1 +1,1 @@
-scp -r pi@raspberrypi:/home/pi/DAQ/logs ./logs
+scp -r pi@raspberrypi:/media/usb/logs ./logs

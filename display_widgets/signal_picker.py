@@ -47,7 +47,7 @@ class SignalPicker(QtWidgets.QDialog):
             self.ui.signalList.clear()
             self.ui.signalList.addItems([sig[1].signal_name for sig in self.signals['Main'] \
                                         [self.ui.nodeCombo.currentText()]            \
-                                        [self.ui.msgCombo.currentText()].items()])
+                                        [self.ui.msgCombo.currentText()].items()] + ['None'])
         except KeyError:
             pass
     
@@ -60,7 +60,10 @@ class SignalPicker(QtWidgets.QDialog):
     def select(self):
         """ Selects a signal """
         try:
-            self.chosen_signal = self.signals['Main'][self.ui.nodeCombo.currentText()] \
+            if self.ui.signalList.currentItem().text() == 'None':
+                self.chosen_signal = None
+            else:
+                self.chosen_signal = self.signals['Main'][self.ui.nodeCombo.currentText()] \
                                             [self.ui.msgCombo.currentText()]          \
                                             [self.ui.signalList.currentItem().text()]
         except (KeyError, AttributeError):
@@ -119,7 +122,11 @@ class MultiSignalPicker(QtWidgets.QDialog):
         prev_sig = None
         if idx < len(self.current_signals): prev_sig = self.current_signals[idx]
         signal = SignalPicker.getSignal(self.signals, prev_sig, self)
-        if not signal: return
+        if not signal: 
+            if len(self.current_signals) - 1 == idx:
+                self.current_signals.pop()
+                self.button_objects[idx].setText("Choose signal")
+            return
         if len(self.current_signals) <= idx: self.current_signals.append(signal)
         else: self.current_signals[idx] = signal
 

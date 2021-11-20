@@ -21,6 +21,7 @@ TODO: error frames aren't being looped back
 #include <net/if.h>
 #include <linux/can.h>
 #include <linux/can/raw.h>
+//#include <linux/sockios.h>
 #include <sys/time.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -35,7 +36,7 @@ TODO: error frames aren't being looped back
 const int LOOPBACK = RECV_OWN_MSGS; 
 
 /* DEFINITIONS */
-typedef struct
+typedef struct __attribute__((packed))
 {
     time_t tv_sec;
     suseconds_t tv_usec;
@@ -186,7 +187,7 @@ int read_frame(int soc,struct can_frame* frame,struct timeval* tv)
     int bytes;
 
     bytes = read(soc,frame,sizeof(*frame));
-    ioctl(soc, SIOCGSTAMP, tv);
+    ioctl(soc, SIOCGSTAMP_OLD, tv);
 
     return bytes;
 }

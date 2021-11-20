@@ -1,5 +1,6 @@
 from PyQt5 import QtWidgets
 from ui.connectionErrorDialog import Ui_ConnectionErrorDialog
+import sys
 
 class ConnectionErrorDialog(QtWidgets.QDialog):
     """ Used to retry connection and optionally enter a different ip address """
@@ -10,7 +11,7 @@ class ConnectionErrorDialog(QtWidgets.QDialog):
         self.ui.setupUi(self)
 
         # Signal connections
-        self.ui.cancelButton.clicked.connect(quit)
+        self.ui.cancelButton.clicked.connect(self.cancel)
         self.ui.retryButton.clicked.connect(self.retry)
 
         self.ui.addressText.setText(current_ip)
@@ -20,6 +21,10 @@ class ConnectionErrorDialog(QtWidgets.QDialog):
     def retry(self):
         self.chosen_ip = self.ui.addressText.text()
         self.accept() # closes dialog
+    
+    def cancel(self):
+        self.chosen_ip = None
+        self.accept()
     
     @staticmethod
     def connectionError(current_ip, parent=None):

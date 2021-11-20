@@ -1,6 +1,6 @@
 [Unit]
 Description=PER LOGGING SERVICE
-# To be placed in /etc/system/systemd
+# To be placed in /etc/systemd/system
 # use sudo systemctl enable daq_logging.service to enable 
 # or replace enable with disable to disable, or start or stop
 # or status to check status 
@@ -8,10 +8,10 @@ Description=PER LOGGING SERVICE
 
 [Service]
 Type=simple
-User=pi
+User=ubuntu
 Environment="TERM=linux"
-WorkingDirectory=/home/pi/DAQ
-ExecStart=/usr/bin/python /home/pi/DAQ/logger.py
+WorkingDirectory=/home/ubuntu/DAQ
+ExecStart=sudo /usr/bin/python3 /home/ubuntu/DAQ/logger.py
 StandardOutput=syslog
 StandardError=syslog
 Restart=always

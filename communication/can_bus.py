@@ -27,6 +27,7 @@ class CanBus(QtCore.QThread):
         self.db = cantools.db.load_file(dbc_path)
 
         self.connected = False
+        self.bus = None
         self.start_time = -1
         self.start_date_time_str = ""
         # TODO: implement bus selection
@@ -43,7 +44,7 @@ class CanBus(QtCore.QThread):
         self.is_paused = True
 
         self.port = 8080
-        self.ip = '169.254.48.90'
+        self.ip = 'ubuntu.local'#'169.254.48.90'
         self.is_wireless = False
 
     
@@ -69,6 +70,8 @@ class CanBus(QtCore.QThread):
             self.bus = TCPBus(self.ip, self.port)
             self.connected = True
             self.is_wireless = True
+            # Empty buffer of old messages
+            while(self.bus.recv(0)): pass
             self.connect_sig.emit(self.connected)
             return
         except OSError:
@@ -113,6 +116,7 @@ class CanBus(QtCore.QThread):
         if self.start_time == -1: 
             self.start_time = msg.timestamp
             self.start_date_time_str = datetime.now().strftime("%m-%d-%Y %H:%M:%S")
+            utils.log_warning('Start time changed')
         msg.timestamp -= self.start_time
         self.new_msg_sig.emit(msg) # TODO: only emit signal if DAQ msg for daq_protocol, currently receives all msgs (low priority performance improvement)
         if not self.is_paused:
@@ -122,6 +126,7 @@ class CanBus(QtCore.QThread):
                 for sig in decode.keys():
                     utils.signals['Main'][dbc_msg.senders[0]][dbc_msg.name][sig].update(decode[sig], msg.timestamp)
             except KeyError:
+                #pass
                 utils.log_warning(f"Unrecognized signal key for {msg}")
             except ValueError:
                 #utils.log_warning(f"Failed to convert msg: {msg}")
@@ -138,7 +143,8 @@ class CanBus(QtCore.QThread):
     def connectError(self):
         """ Creates message box prompting to try to reconnect """
         self.ip = ConnectionErrorDialog.connectionError(self.ip)
-        self.connect()
+        if self.ip:
+            self.connect()
 
 
     def updateSignals(self, can_config: dict):
@@ -186,7 +192,7 @@ class CanBus(QtCore.QThread):
                 loop_count = 0
                 avg_process_time = 0
                 skips = 0
-        self.bus.shutdown()
+        if self.bus: self.bus.shutdown()
 
 
 class BusSignal(QtCore.QObject):

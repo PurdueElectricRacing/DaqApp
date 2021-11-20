@@ -13,7 +13,7 @@ import utils
 
 class TCPBus(can.BusABC):
 
-    RECV_FRAME_SZ = 21
+    RECV_FRAME_SZ = 29
     CAN_EFF_FLAG = 0x80000000
     CAN_RTR_FLAG = 0x40000000
     CAN_ERR_FLAG = 0x20000000
@@ -84,9 +84,12 @@ class TCPBus(can.BusABC):
 
     def _bytes_to_message(self,b):
         """convert raw TCP bytes to can.Message object"""
-        ts = int.from_bytes(b[:4],"little") + int.from_bytes(b[4:8],"little")/1e6
-        can_id = int.from_bytes(b[8:12],"little")
-        dlc = b[12] #TODO: sanity check on these values in case of corrupted messages.
+        #ts = int.from_bytes(b[:4],"little") + int.from_bytes(b[4:8],"little")/1e6
+        ts = int.from_bytes(b[:8],"little") + int.from_bytes(b[8:16],"little")/1e6
+        #print(f"len: {len(b)}, time: {ts}, data: {b}")
+        #can_id = int.from_bytes(b[8:12],"little")
+        can_id = int.from_bytes(b[16:20],"little")
+        dlc = b[20] #TODO: sanity check on these values in case of corrupted messages.
 
         #decompose ID
         is_extended = bool(can_id & self.CAN_EFF_FLAG) #CAN_EFF_FLAG
@@ -102,7 +105,8 @@ class TCPBus(can.BusABC):
             is_error_frame = bool(can_id & self.CAN_ERR_FLAG), #CAN_ERR_FLAG
             is_remote_frame = bool(can_id & self.CAN_RTR_FLAG), #CAN_RTR_FLAG
             dlc=dlc,
-            data=b[13:13+dlc]
+            #data=b[13:13+dlc]
+            data=b[21:21+dlc]
         )
 
     def _poll_socket(self):

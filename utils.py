@@ -1,6 +1,7 @@
 import json
 from jsonschema import validate
 from jsonschema.exceptions import ValidationError
+import sys
 
 # Global Variables
 def initGlobals():
@@ -44,7 +45,7 @@ def load_json_config(config_path, schema_path):
     except ValidationError as e:
         log_error("Invalid JSON!")
         print(e)
-        quit()
+        sys.exit(1)
 
     return config
 
