@@ -1,6 +1,8 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
 from datetime import datetime
 import can
+import can.interfaces.gs_usb
+import gs_usb
 import usb
 import cantools
 from communication.client import TCPBus
@@ -11,7 +13,7 @@ import threading
 import numpy as np
 import math
 
-# TODO: selection for bustype: gs_usb or socket
+
 class CanBus(QtCore.QThread):
     """
     Handles sending and receiving can bus messages, 
@@ -26,9 +28,12 @@ class CanBus(QtCore.QThread):
         super(CanBus, self).__init__()
         self.db = cantools.db.load_file(dbc_path)
 
+        print(f"CAN version: {can.__version__}")
+        print(f"gs_usb version: {gs_usb.__version__}")
+
         self.connected = False
         self.bus = None
-        self.start_time = -1
+        self.start_time_bus = -1
         self.start_date_time_str = ""
         # TODO: implement bus selection
         #self.bus_name = "Main"
@@ -71,7 +76,11 @@ class CanBus(QtCore.QThread):
             self.connected = True
             self.is_wireless = True
             # Empty buffer of old messages
-            while(self.bus.recv(0)): pass
+            time.sleep(3)
+            i=0
+            while(self.bus.recv(0)): 
+                i+=1
+            print(i)
             self.connect_sig.emit(self.connected)
             return
         except OSError:
@@ -94,7 +103,8 @@ class CanBus(QtCore.QThread):
         self.connect()
         self.start()
         utils.clearDictItems(utils.signals)
-        self.start_time = -1
+        self.start_time_bus = -1
+        self.start_time_cmp = 0
         self.start_date_time_str = datetime.now().strftime("%m-%d-%Y %H:%M:%S")
     
     def sendFormatMsg(self, msg_name, msg_data: dict):
@@ -113,11 +123,15 @@ class CanBus(QtCore.QThread):
     
     def onMessageReceived(self, msg: can.Message):
         """ Emits new message signal and updates the corresponding signals """
-        if self.start_time == -1: 
-            self.start_time = msg.timestamp
+        if self.start_time_bus == -1: 
+            self.start_time_bus = msg.timestamp
+            self.start_time_cmp = time.time()
             self.start_date_time_str = datetime.now().strftime("%m-%d-%Y %H:%M:%S")
-            utils.log_warning('Start time changed')
-        msg.timestamp -= self.start_time
+            utils.log_warning(f"Start time changed: {msg.timestamp}")
+        if msg.timestamp - self.start_time_bus < 0:
+            utils.log_warning("Out of order")
+        msg.timestamp -= self.start_time_bus
+        #print(msg.timestamp)
         self.new_msg_sig.emit(msg) # TODO: only emit signal if DAQ msg for daq_protocol, currently receives all msgs (low priority performance improvement)
         if not self.is_paused:
             try:
@@ -126,11 +140,11 @@ class CanBus(QtCore.QThread):
                 for sig in decode.keys():
                     utils.signals['Main'][dbc_msg.senders[0]][dbc_msg.name][sig].update(decode[sig], msg.timestamp)
             except KeyError:
-                #pass
-                utils.log_warning(f"Unrecognized signal key for {msg}")
+                if "daq" not in dbc_msg.name:
+                    utils.log_warning(f"Unrecognized signal key for {msg}")
             except ValueError:
-                #utils.log_warning(f"Failed to convert msg: {msg}")
-                pass
+                if "daq" not in dbc_msg.name:
+                    utils.log_warning(f"Failed to convert msg: {msg}")
 
         # bus load estimation
         msg_bit_length_max = 64 + msg.dlc * 8 + 18 
@@ -223,10 +237,10 @@ class BusSignal(QtCore.QObject):
 
     def update(self, val, timestamp):
         """ update the value of the signal """
+        if self.next_idx >= self.history:
+            utils.log_warning(f"{self.signal_name} out of space, resetting!")
+            self.clear()
         with self.data_lock:
-            if self.next_idx >= self.history:
-                utils.log_warning(f"{self.signal_name} out of space, resetting!")
-                self.clear()
             self.data[self.next_idx] = val
             self.times[self.next_idx] = timestamp
             self.next_idx += 1

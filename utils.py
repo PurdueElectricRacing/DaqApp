@@ -1,6 +1,7 @@
 import json
 from jsonschema import validate
 from jsonschema.exceptions import ValidationError
+import numpy as np
 import sys
 
 # Global Variables
@@ -9,6 +10,8 @@ def initGlobals():
     signals = {}
     global plot_x_range_sec
     plot_x_range_sec = 10
+    global events
+    events = []
 
 # Logging helper functions
 class bcolors:
@@ -56,3 +59,12 @@ def clearDictItems(dictionary:dict):
             clearDictItems(value)
         else:
             value.clear()
+
+def logEvent(time, msg):
+    global events
+    events.append([time, msg])
+    print(events)
+
+def clearEvents():
+    global events
+    events = []

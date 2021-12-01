@@ -1,10 +1,13 @@
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, QtCore
 from ui.frameViewer import Ui_frameViewer
 from communication.can_bus import CanBus
 import can
+import threading
 
 class FrameViewer(QtWidgets.QWidget):
     """ Widget that displays can message data in a table """
+
+    data_lock = threading.Lock()
 
     def __init__(self, bus: CanBus, parent=None):
         super(FrameViewer, self).__init__(parent)
@@ -33,8 +36,17 @@ class FrameViewer(QtWidgets.QWidget):
         self.bus = bus
         bus.new_msg_sig.connect(self.messageReceived)
 
+        self.fps = 15
+        self.timer = QtCore.QTimer()
+        self.timer.timeout.connect(self.updateRows)
+        self.timer.start(int(1000.0/self.fps))
+
         self.row_ids = []
         self.row_times = []
+        self.row_deltas = []
+        self.row_dlcs = []
+        self.row_data = []
+
 
     def messageReceived(self, msg: can.Message):
         """ Receives message and adds to row """
@@ -48,30 +60,42 @@ class FrameViewer(QtWidgets.QWidget):
         except KeyError:
             return
 
-        # Create new row if not yet existing
-        if msg.arbitration_id not in self.row_ids:
-            self.row_ids.append(msg.arbitration_id)
-            self.row_times.append(msg.timestamp)
-            self.ui.msgTable.setRowCount(len(self.row_ids))
-        row_idx = self.row_ids.index(msg.arbitration_id)
+        with self.data_lock:
+            # Create new row if not yet existing
+            if msg.arbitration_id not in self.row_ids:
+                self.row_ids.append(msg.arbitration_id)
+                self.row_times.append(msg.timestamp)
+                self.row_deltas.append(0)
+                self.row_dlcs.append(msg.dlc)
+                self.row_data.append(data)
+                self.ui.msgTable.setRowCount(len(self.row_ids))
+                
+                # update row contents that do not change for a message once
+                self.ui.msgTable.setItem(len(self.row_ids) - 1, 1, QtWidgets.QTableWidgetItem("Rx" if msg.is_rx else "Tx"))
+                self.ui.msgTable.setItem(len(self.row_ids) - 1, 2, QtWidgets.QTableWidgetItem(hex(msg.arbitration_id)))
+                self.ui.msgTable.setItem(len(self.row_ids) - 1, 3, QtWidgets.QTableWidgetItem(dbc_msg.senders[0]))
+                self.ui.msgTable.setItem(len(self.row_ids) - 1, 4, QtWidgets.QTableWidgetItem(dbc_msg.name))
+            else:
+                row_idx = self.row_ids.index(msg.arbitration_id)
+                self.row_deltas[row_idx] = msg.timestamp - self.row_times[row_idx]
+                self.row_times[row_idx] = msg.timestamp
+                self.row_dlcs[row_idx] = msg.dlc
+                self.row_data[row_idx] = data
 
-        # Organize row data
-        row = [
-            f"{(msg.timestamp - self.row_times[row_idx]):.4f}",
-            "Rx" if msg.is_rx else "Tx",
-            hex(msg.arbitration_id),
-            dbc_msg.senders[0],
-            dbc_msg.name,
-            str(msg.dlc),
-            data
-        ]
-        self.row_times[row_idx] = msg.timestamp
-        # Add row entries column by column
-        for n, item in enumerate(row):
-            self.ui.msgTable.setItem(row_idx, n, QtWidgets.QTableWidgetItem(item))
+    def updateRows(self):
+        """ Updates all rows, called periodically """
+        with self.data_lock:
+            for idx in range(len(self.row_ids)):
+                self.ui.msgTable.setItem(idx, 0, QtWidgets.QTableWidgetItem(f"{self.row_deltas[idx]:.4f}"))
+                self.ui.msgTable.setItem(idx, 5, QtWidgets.QTableWidgetItem(str(self.row_dlcs[idx])))
+                self.ui.msgTable.setItem(idx, 6, QtWidgets.QTableWidgetItem(self.row_data[idx]))
 
     def removeRow(self, row_idx: int):
         """ removes row from the table """
-        self.row_ids.pop(row_idx)
-        self.row_times.pop(row_idx)
-        self.ui.msgTable.removeRow(row_idx)
+        with self.data_lock:
+            self.row_ids.pop(row_idx)
+            self.row_times.pop(row_idx)
+            self.row_deltas.pop(row_idx)
+            self.row_dlcs.pop(row_idx)
+            self.row_data.pop(row_idx)
+            self.ui.msgTable.removeRow(row_idx)

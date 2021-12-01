@@ -1,5 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+# helpful links:
+# https://stackoverflow.com/questions/51312059/kvasers-can-library-has-been-loaded-but-program-executable-outputs-a-no-modul
 
 block_cipher = None
 
@@ -12,17 +14,14 @@ binaries = [
     ('C:\\Windows\\System32\\libusb-1.0.dll', '.')
 ]
 
-paths = [
-    'C:\\Users\lukeo\Documents\firmware\src\python-can',
-    'C:\\Users\lukeo\Documents\firmware\src\python-can\can\interfaces'
-]
+paths = []
 
 
 a = Analysis(['main.py'],
              pathex=paths,
              binaries=binaries,
              datas=added_files,
-             hiddenimports=['usb', 'gs_usb'],
+             hiddenimports=['usb'],
              hookspath=[],
              hooksconfig={},
              runtime_hooks=[],

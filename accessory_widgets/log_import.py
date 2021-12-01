@@ -38,7 +38,7 @@ class LogImporter(QtWidgets.QDialog):
         # clear current data
         if not self.ui.joinCheck.isChecked():
             utils.clearDictItems(utils.signals)
-            self.bus.start_time = -1
+            self.bus.start_time_bus = -1
 
         for path in self.file_locations:
             with open(path, 'r') as log:

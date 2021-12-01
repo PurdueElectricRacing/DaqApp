@@ -11,9 +11,11 @@ from communication.daq_protocol import DaqProtocol
 from display_widgets.lcd_widget import LcdDisplay
 from display_widgets.widget_deleter import WidgetDeleter
 from ui.mainWindow import Ui_MainWindow
+import webbrowser
 import qdarkstyle
 import utils
 import json
+import time
 import sys
 import os
 
@@ -46,8 +48,14 @@ class Main(QtWidgets.QMainWindow):
         self.ui.comlbl = QtWidgets.QLabel()
         self.ui.loadlbl = QtWidgets.QLabel()
         self.ui.loadlbl.setStyleSheet("font:16px;")
+        self.ui.eventTextEdit = QtWidgets.QLineEdit(text='Event')
+        self.ui.eventButton = QtWidgets.QPushButton('Log Event')
+        self.ui.eventButton.setStyleSheet("border-color: black; border-style: outset; border-width: 2px;")
         self.ui.statusbar.addWidget(self.ui.comlbl)
         self.ui.statusbar.addWidget(self.ui.loadlbl)
+        self.ui.statusbar.addWidget(self.ui.eventTextEdit)
+        self.ui.statusbar.addWidget(self.ui.eventButton)
+        self.ui.eventButton.clicked.connect(self.logEvent)
 
         # Menu Bar Tools
         self.ui.play_icon = self.style().standardIcon(getattr(QtWidgets.QStyle, 'SP_MediaPlay'))
@@ -101,6 +109,8 @@ class Main(QtWidgets.QMainWindow):
         self.ui.actionPlayPause.triggered.connect(self.playPause)
         self.ui.actionClear.triggered.connect(self.clearData)
         self.ui.actionReconnect.triggered.connect(self.can_bus.reconnect)
+        self.ui.actionAbout.triggered.connect(lambda: webbrowser.open(
+                            'http://confluence.purdueelectricracing.com/display/EL/DAQ'))
 
         self.can_bus.connect()
         self.can_bus.start()
@@ -207,7 +217,13 @@ class Main(QtWidgets.QMainWindow):
     def clearData(self):
         """ Clears recorded signal values """
         utils.clearDictItems(utils.signals)
-        self.can_bus.start_time = -1
+        utils.clearEvents()
+        self.can_bus.start_time_bus = -1
+    
+    def logEvent(self):
+        """ Logs and event, recording the timestamp """
+        t = time.time() - self.can_bus.start_time_cmp
+        utils.logEvent(t, self.ui.eventTextEdit.text())
 
     def closeEvent(self, event):
         """ Called on exit of main window """

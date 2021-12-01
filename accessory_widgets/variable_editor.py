@@ -35,7 +35,8 @@ class VariableEditor(QtWidgets.QWidget):
 
         # Add nodes to node selector
         self.ui.nodeSelector.clear()
-        self.ui.nodeSelector.addItems(utils.signals['Main'].keys())
+        self.daq_enabled_nodes = [key for key in utils.signals['Main'].keys() if f"daq_response_{key.upper()}" in utils.signals['Main'][key]]
+        self.ui.nodeSelector.addItems(self.daq_enabled_nodes)#utils.signals['Main'].keys())
 
         self.curr_var = None
         self.save_in_prog = False 

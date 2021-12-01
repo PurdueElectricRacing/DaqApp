@@ -28,7 +28,7 @@ TODO: error frames aren't being looped back
 #include <pthread.h> 
 
 #define HOSTNAME_LEN 128
-#define BUF_SZ 100000
+#define BUF_SZ (29*20)
 
 /* CONFIG PARAMETERS */
 #define DEBUG 0

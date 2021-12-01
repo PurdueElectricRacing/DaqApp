@@ -49,12 +49,15 @@ class LogExporter(QtWidgets.QWidget):
 
         self.ui.binSizeSpin.setValue(self.bin_size)
         self.ui.binSizeSpin.hide()
+        self.ui.binSizeLabel.hide()
     
     def formatChanged(self):
         if self.ui.formatSelectCombo.currentText() == EXPORT_BINNED:
             self.ui.binSizeSpin.show()
+            self.ui.binSizeLabel.show()
         else:
             self.ui.binSizeSpin.hide()
+            self.ui.binSizeLabel.hide()
     
     def saveLog(self):
         # extract checked signals
@@ -77,6 +80,7 @@ class LogExporter(QtWidgets.QWidget):
 
     def exportChronological(self):
         # create array with columns of time, bus, node, msg, signal name, value
+        exp = np.array([])
         self.export_array = np.array([])
 
         for sig in self.checked_sigs:
@@ -90,13 +94,16 @@ class LogExporter(QtWidgets.QWidget):
                                              np.full(sig.length, sig.signal_name),
                                              sig.data[:sig.length]))
                 # np.concatenate((), axis=0) -> stacks columns
-                if self.export_array.size != 0:
-                    self.export_array = np.concatenate((self.export_array, sig_chunk))
+                if exp.size != 0:
+                    exp = np.concatenate((exp, sig_chunk))
                 else:
-                    self.export_array = sig_chunk
-
+                    exp = sig_chunk
+        
+        # add events
+        exp = np.concatenate((exp, np.column_stack((np.array(utils.events),
+                                                    np.full((len(utils.events), 4), "")))))
         # A[np.argsort(A[:,0])] -> sorts by first column
-        self.export_array = self.export_array[np.argsort(self.export_array[:, 0])]
+        self.export_array = exp[np.argsort(exp[:,0].astype(np.float))]
 
         self.header = f"{self.bus.start_date_time_str}, Bus, Node, Message, Signal, Value"
 
@@ -124,7 +131,7 @@ class LogExporter(QtWidgets.QWidget):
                     signal_time_array = np.concatenate((signal_time_array, sig_chunk))
                 else:
                     signal_time_array = sig_chunk
-
+        
         self.bin_size = self.ui.binSizeSpin.value()
         bins = np.arange(signal_time_array[:,0].astype(np.float).min(), signal_time_array[:, 0].astype(np.float).max()+self.bin_size/1000.0, self.bin_size/1000.0)
 
@@ -165,6 +172,8 @@ class LogExporter(QtWidgets.QWidget):
             node_row += f", {sig.node_name}"
             msg_row += f", {sig.message_name}"
             sig_row += f", {sig.signal_name}"
+        
+        sig_row += ", Events: " + str(utils.events)
         
         self.header = "\n".join((bus_row, node_row, msg_row, sig_row))
         self.saveArray()
