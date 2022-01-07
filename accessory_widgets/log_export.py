@@ -100,8 +100,9 @@ class LogExporter(QtWidgets.QWidget):
                     exp = sig_chunk
         
         # add events
-        exp = np.concatenate((exp, np.column_stack((np.array(utils.events),
-                                                    np.full((len(utils.events), 4), "")))))
+        if len(utils.events) > 0:
+            exp = np.concatenate((exp, np.column_stack((np.array(utils.events),
+                                                        np.full((len(utils.events), 4), "")))))
         # A[np.argsort(A[:,0])] -> sorts by first column
         self.export_array = exp[np.argsort(exp[:,0].astype(np.float))]
 

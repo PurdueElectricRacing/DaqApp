@@ -1,6 +1,7 @@
 from PyQt5 import QtWidgets, QtGui
 from communication.can_bus import BusSignal
 from ui.signalPicker import Ui_signalPicker
+import utils
 
 
 class SignalPicker(QtWidgets.QDialog):
@@ -20,7 +21,7 @@ class SignalPicker(QtWidgets.QDialog):
         self.ui.colorButton.clicked.connect(self.getColor)
 
         # Populate with items
-        self.ui.nodeCombo.addItems(self.signals['Main'].keys())
+        self.ui.nodeCombo.addItems(self.signals[utils.b_str].keys())
 
         self.color = QtGui.QColor(255, 255, 255)
 
@@ -34,18 +35,18 @@ class SignalPicker(QtWidgets.QDialog):
         if curr_signal != None: self.ui.msgCombo.setCurrentText(curr_signal.message_name) 
 
         self.updateSigList()
-        if curr_signal != None: self.ui.signalList.setCurrentRow(list(self.signals['Main'][curr_signal.node_name][curr_signal.message_name].keys()).index(curr_signal.signal_name))
+        if curr_signal != None: self.ui.signalList.setCurrentRow(list(self.signals[utils.b_str][curr_signal.node_name][curr_signal.message_name].keys()).index(curr_signal.signal_name))
 
     def updateMsgCombo(self):
         """ Updates the message options """
         self.ui.msgCombo.clear()
-        self.ui.msgCombo.addItems(self.signals['Main'][self.ui.nodeCombo.currentText()].keys())
+        self.ui.msgCombo.addItems(self.signals[utils.b_str][self.ui.nodeCombo.currentText()].keys())
 
     def updateSigList(self):
         """ Updates the list of signals """
         try:
             self.ui.signalList.clear()
-            self.ui.signalList.addItems([sig[1].signal_name for sig in self.signals['Main'] \
+            self.ui.signalList.addItems([sig[1].signal_name for sig in self.signals[utils.b_str] \
                                         [self.ui.nodeCombo.currentText()]            \
                                         [self.ui.msgCombo.currentText()].items()] + ['None'])
         except KeyError:
@@ -63,7 +64,7 @@ class SignalPicker(QtWidgets.QDialog):
             if self.ui.signalList.currentItem().text() == 'None':
                 self.chosen_signal = None
             else:
-                self.chosen_signal = self.signals['Main'][self.ui.nodeCombo.currentText()] \
+                self.chosen_signal = self.signals[utils.b_str][self.ui.nodeCombo.currentText()] \
                                             [self.ui.msgCombo.currentText()]          \
                                             [self.ui.signalList.currentItem().text()]
         except (KeyError, AttributeError):

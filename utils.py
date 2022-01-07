@@ -12,6 +12,8 @@ def initGlobals():
     plot_x_range_sec = 10
     global events
     events = []
+    global b_str
+    b_str = "Main"
 
 # Logging helper functions
 class bcolors:

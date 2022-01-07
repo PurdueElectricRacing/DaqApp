@@ -35,8 +35,6 @@ class CanBus(QtCore.QThread):
         self.bus = None
         self.start_time_bus = -1
         self.start_date_time_str = ""
-        # TODO: implement bus selection
-        #self.bus_name = "Main"
 
         # Bus Load Estimation
         self.total_bits = 0
@@ -133,15 +131,18 @@ class CanBus(QtCore.QThread):
         msg.timestamp -= self.start_time_bus
         #print(msg.timestamp)
         self.new_msg_sig.emit(msg) # TODO: only emit signal if DAQ msg for daq_protocol, currently receives all msgs (low priority performance improvement)
-        if not self.is_paused:
+        if not self.is_paused and not msg.is_error_frame:
+            dbc_msg = None
             try:
                 dbc_msg = self.db.get_message_by_frame_id(msg.arbitration_id)
                 decode = dbc_msg.decode(msg.data)
                 for sig in decode.keys():
-                    utils.signals['Main'][dbc_msg.senders[0]][dbc_msg.name][sig].update(decode[sig], msg.timestamp)
+                    utils.signals[utils.b_str][dbc_msg.senders[0]][dbc_msg.name][sig].update(decode[sig], msg.timestamp)
             except KeyError:
-                if "daq" not in dbc_msg.name:
+                if dbc_msg and "daq" not in dbc_msg.name:
                     utils.log_warning(f"Unrecognized signal key for {msg}")
+                else:
+                    utils.log_warning(f"unrecognized: {msg.arbitration_id}")
             except ValueError:
                 if "daq" not in dbc_msg.name:
                     utils.log_warning(f"Failed to convert msg: {msg}")

@@ -105,7 +105,7 @@ class Main(QtWidgets.QMainWindow):
         self.ui.actionLCD.triggered.connect(self.newLCD)
         self.ui.actionPlot.triggered.connect(self.newPlot)
         self.ui.actionRemoveWidget.triggered.connect(self.removeDisplayWidget)
-        self.ui.actionPreferences.triggered.connect(lambda : PreferencesEditor.editPreferences(self))
+        self.ui.actionPreferences.triggered.connect(lambda : PreferencesEditor.editPreferences(self.ui.varEdit, parent=self))
         self.ui.actionPlayPause.triggered.connect(self.playPause)
         self.ui.actionClear.triggered.connect(self.clearData)
         self.ui.actionReconnect.triggered.connect(self.can_bus.reconnect)
