@@ -72,6 +72,13 @@
      </property>
     </widget>
    </item>
+   <item>
+    <widget class="QLabel" name="label_2">
+     <property name="text">
+      <string>Warning: Importing will clear the current recorded data.</string>
+     </property>
+    </widget>
+   </item>
   </layout>
  </widget>
  <resources/>

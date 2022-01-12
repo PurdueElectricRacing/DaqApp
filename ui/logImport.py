@@ -40,6 +40,9 @@ class Ui_logImport(object):
         self.importButton = QtWidgets.QPushButton(logImport)
         self.importButton.setObjectName("importButton")
         self.verticalLayout.addWidget(self.importButton)
+        self.label_2 = QtWidgets.QLabel(logImport)
+        self.label_2.setObjectName("label_2")
+        self.verticalLayout.addWidget(self.label_2)
 
         self.retranslateUi(logImport)
         QtCore.QMetaObject.connectSlotsByName(logImport)
@@ -52,3 +55,4 @@ class Ui_logImport(object):
         self.fileButton.setText(_translate("logImport", "Select File"))
         self.joinCheck.setText(_translate("logImport", "Is joining log file"))
         self.importButton.setText(_translate("logImport", "Import"))
+        self.label_2.setText(_translate("logImport", "Warning: Importing will clear the current recorded data."))

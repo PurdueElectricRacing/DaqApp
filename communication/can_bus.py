@@ -45,6 +45,7 @@ class CanBus(QtCore.QThread):
         self.updateSignals(self.can_config)
 
         self.is_paused = True
+        self.is_importing = False
 
         self.port = 8080
         self.ip = 'ubuntu.local'#'169.254.48.90'
@@ -131,7 +132,7 @@ class CanBus(QtCore.QThread):
         msg.timestamp -= self.start_time_bus
         #print(msg.timestamp)
         self.new_msg_sig.emit(msg) # TODO: only emit signal if DAQ msg for daq_protocol, currently receives all msgs (low priority performance improvement)
-        if not self.is_paused and not msg.is_error_frame:
+        if (not self.is_paused or self.is_importing) and not msg.is_error_frame:
             dbc_msg = None
             try:
                 dbc_msg = self.db.get_message_by_frame_id(msg.arbitration_id)
@@ -190,7 +191,8 @@ class CanBus(QtCore.QThread):
             msg = self.bus.recv(0.25)
             if msg:
                 delta = time.perf_counter()
-                self.onMessageReceived(msg)
+                if not self.is_importing:
+                    self.onMessageReceived(msg)
                 avg_process_time += time.perf_counter() - delta
             else:
                 skips += 1

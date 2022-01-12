@@ -32,30 +32,31 @@ class LogImporter(QtWidgets.QDialog):
         # parse line into can.Message
         # decode and update corresponding signal object
 
-        started_paused = self.bus.is_paused
-        if started_paused: self.bus.pause(False)
+        self.bus.pause(True)
+        self.bus.is_importing = True
 
         # clear current data
         if not self.ui.joinCheck.isChecked():
             utils.clearDictItems(utils.signals)
+            utils.clearEvents()
             self.bus.start_time_bus = -1
-
+        
         for path in self.file_locations:
             with open(path, 'r') as log:
                 for line in log.readlines():
                     cols = line.split(" ")
-                    time = float(cols[0][1:-2])
+                    dt = float(cols[0][1:-2])
                     id, data = cols[2].split('#')
                     dlc = int(len(data)/2)
-                    msg = can.Message(timestamp=time,
+                    msg = can.Message(timestamp=dt,
                                     is_extended_id=True,
                                     dlc=dlc,
                                     data=int(data, base=16).to_bytes(dlc, 'big'),
                                     arbitration_id=int(id, base=16))
                     self.bus.onMessageReceived(msg)
         
-        if started_paused: self.bus.pause(True)
-
+        self.bus.is_importing = False
+        
         self.accept()
 
     @staticmethod
