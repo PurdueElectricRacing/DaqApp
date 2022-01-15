@@ -1,7 +1,7 @@
 {
-    "daq_config_path": "../firmware/common/daq/daq_config.json",
-    "daq_schema_path": "../firmware/common/daq/daq_schema.json",
-    "dbc_path": "../firmware/common/daq/per_dbc.dbc",
-    "can_config_path": "../firmware/common/daq/can_config.json",
-    "can_schema_path": "../firmware/common/daq/can_schema.json"
+    "daq_config_path": "C:/Users/parth/Desktop/PER Files/firmware/common/daq/daq_config.json",
+    "daq_schema_path": "C:/Users/parth/Desktop/PER Files/firmware/common/daq/daq_schema.json",
+    "dbc_path": "C:/Users/parth/Desktop/PER Files/firmware/common/daq/per_dbc.dbc",
+    "can_config_path": "C:/Users/parth/Desktop/PER Files/firmware/common/daq/can_config.json",
+    "can_schema_path": "C:/Users/parth/Desktop/PER Files/firmware/common/daq/can_schema.json"
 }

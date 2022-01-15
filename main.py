@@ -14,6 +14,8 @@ import qdarkstyle
 import utils
 import json
 import sys
+from display_widgets.gauge_widget import AnalogGaugeWidget
+
 
 CONFIG_FILE_PATH = "./dashboard.json"
 
