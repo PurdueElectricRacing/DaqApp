@@ -1,12 +1,13 @@
 from PyQt5 import QtWidgets, QtGui
-from cantools.database.can.c_source import Signal
+from communication.can_bus import BusSignal
 from ui.signalPicker import Ui_signalPicker
+import utils
 
 
 class SignalPicker(QtWidgets.QDialog):
     """ Used to pick a signal based on node and message """
 
-    def __init__(self, signals: dict, parent=None):
+    def __init__(self, signals: dict, curr_signal:BusSignal, parent=None):
         super(SignalPicker, self).__init__(parent)
         self.ui = Ui_signalPicker()
         self.ui.setupUi(self)
@@ -20,24 +21,34 @@ class SignalPicker(QtWidgets.QDialog):
         self.ui.colorButton.clicked.connect(self.getColor)
 
         # Populate with items
-        self.ui.nodeCombo.addItems(self.signals['Main'].keys())
-        self.updateMsgCombo()
-        self.updateSigList()
+        self.ui.nodeCombo.addItems(self.signals[utils.b_str].keys())
 
         self.color = QtGui.QColor(255, 255, 255)
+
+        # Set current selection
+        if curr_signal != None:
+            self.ui.nodeCombo.setCurrentText(curr_signal.node_name)
+            self.color = curr_signal.color
+            self.ui.colorButton.setStyleSheet(f"background-color: {self.color.name()}")
+
+        self.updateMsgCombo()
+        if curr_signal != None: self.ui.msgCombo.setCurrentText(curr_signal.message_name) 
+
+        self.updateSigList()
+        if curr_signal != None: self.ui.signalList.setCurrentRow(list(self.signals[utils.b_str][curr_signal.node_name][curr_signal.message_name].keys()).index(curr_signal.signal_name))
 
     def updateMsgCombo(self):
         """ Updates the message options """
         self.ui.msgCombo.clear()
-        self.ui.msgCombo.addItems(self.signals['Main'][self.ui.nodeCombo.currentText()].keys())
+        self.ui.msgCombo.addItems(self.signals[utils.b_str][self.ui.nodeCombo.currentText()].keys())
 
     def updateSigList(self):
         """ Updates the list of signals """
         try:
             self.ui.signalList.clear()
-            self.ui.signalList.addItems([sig[1].signal_name for sig in self.signals['Main'] \
+            self.ui.signalList.addItems([sig[1].signal_name for sig in self.signals[utils.b_str] \
                                         [self.ui.nodeCombo.currentText()]            \
-                                        [self.ui.msgCombo.currentText()].items()])
+                                        [self.ui.msgCombo.currentText()].items()] + ['None'])
         except KeyError:
             pass
     
@@ -50,7 +61,10 @@ class SignalPicker(QtWidgets.QDialog):
     def select(self):
         """ Selects a signal """
         try:
-            self.chosen_signal = self.signals['Main'][self.ui.nodeCombo.currentText()] \
+            if self.ui.signalList.currentItem().text() == 'None':
+                self.chosen_signal = None
+            else:
+                self.chosen_signal = self.signals[utils.b_str][self.ui.nodeCombo.currentText()] \
                                             [self.ui.msgCombo.currentText()]          \
                                             [self.ui.signalList.currentItem().text()]
         except (KeyError, AttributeError):
@@ -58,9 +72,9 @@ class SignalPicker(QtWidgets.QDialog):
         self.accept() # closes dialog
 
     @staticmethod
-    def getSignal(signals, parent=None):
+    def getSignal(signals, curr_signal, parent=None):
         """ Used to create a signal picker, returns selected signal """
-        picker = SignalPicker(signals, parent)
+        picker = SignalPicker(signals, curr_signal, parent)
         picker.exec_()
         if picker.chosen_signal: picker.chosen_signal.color = picker.color
         return picker.chosen_signal
@@ -106,8 +120,14 @@ class MultiSignalPicker(QtWidgets.QDialog):
     
     def buttonClicked(self, idx):
         """ Callback for signal select button, prompt signal selection """
-        signal = SignalPicker.getSignal(self.signals, self)
-        if not signal: return
+        prev_sig = None
+        if idx < len(self.current_signals): prev_sig = self.current_signals[idx]
+        signal = SignalPicker.getSignal(self.signals, prev_sig, self)
+        if not signal: 
+            if len(self.current_signals) - 1 == idx:
+                self.current_signals.pop()
+                self.button_objects[idx].setText("Choose signal")
+            return
         if len(self.current_signals) <= idx: self.current_signals.append(signal)
         else: self.current_signals[idx] = signal
 

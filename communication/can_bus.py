@@ -1,14 +1,19 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
+from datetime import datetime
 import can
+import can.interfaces.gs_usb
+import gs_usb
 import usb
 import cantools
+from communication.client import TCPBus
+from communication.connection_error_dialog import ConnectionErrorDialog
 import utils
 import time
 import threading
 import numpy as np
 import math
 
-# TODO: selection for bustype: gs_usb or socket
+
 class CanBus(QtCore.QThread):
     """
     Handles sending and receiving can bus messages, 
@@ -23,10 +28,13 @@ class CanBus(QtCore.QThread):
         super(CanBus, self).__init__()
         self.db = cantools.db.load_file(dbc_path)
 
+        print(f"CAN version: {can.__version__}")
+        print(f"gs_usb version: {gs_usb.__version__}")
+
         self.connected = False
-        self.start_time = -1
-        # TODO: implement bus selection
-        #self.bus_name = "Main"
+        self.bus = None
+        self.start_time_bus = -1
+        self.start_date_time_str = ""
 
         # Bus Load Estimation
         self.total_bits = 0
@@ -37,9 +45,16 @@ class CanBus(QtCore.QThread):
         self.updateSignals(self.can_config)
 
         self.is_paused = True
+        self.is_importing = False
 
+        self.port = 8080
+        self.ip = 'ubuntu.local'#'169.254.48.90'
+        self.is_wireless = False
+
+    
     def connect(self):
-        """ Connects to the USB cannable """
+        """ Connects to the bus """
+        # Attempt usb connection first
         dev = usb.core.find(idVendor=0x1D50, idProduct=0x606F)
         if dev:
             channel = dev.product
@@ -50,12 +65,30 @@ class CanBus(QtCore.QThread):
             # Empty buffer of old messages
             while(self.bus.recv(0)): pass
             self.connected = True
+            self.is_wireless = False
             self.connect_sig.emit(self.connected)
-        else:
-            self.connected = False
-            utils.log_error("Failed to connect to USB Cannable")
+            return
+
+        # Usb failed, trying tcp
+        try:
+            self.bus = TCPBus(self.ip, self.port)
+            self.connected = True
+            self.is_wireless = True
+            # Empty buffer of old messages
+            time.sleep(3)
+            i=0
+            while(self.bus.recv(0)): 
+                i+=1
+            print(i)
             self.connect_sig.emit(self.connected)
-            self.connectError()
+            return
+        except OSError:
+            pass # failed to connect
+
+        self.connected = False
+        utils.log_error("Failed to connect to a bus")
+        self.connect_sig.emit(self.connected)
+        self.connectError()
 
     def reconnect(self):
         """ destroy usb connection, attempt to reconnect """
@@ -64,12 +97,14 @@ class CanBus(QtCore.QThread):
             # wait for bus receive to finish
             pass
         self.bus.shutdown()
-        usb.util.dispose_resources(self.bus.gs_usb.gs_usb)
+        if not self.is_wireless: usb.util.dispose_resources(self.bus.gs_usb.gs_usb)
         del(self.bus)
         self.connect()
         self.start()
         utils.clearDictItems(utils.signals)
-        self.start_time = -1
+        self.start_time_bus = -1
+        self.start_time_cmp = 0
+        self.start_date_time_str = datetime.now().strftime("%m-%d-%Y %H:%M:%S")
     
     def sendFormatMsg(self, msg_name, msg_data: dict):
         """ Sends a message using a dictionary of its data """
@@ -87,20 +122,31 @@ class CanBus(QtCore.QThread):
     
     def onMessageReceived(self, msg: can.Message):
         """ Emits new message signal and updates the corresponding signals """
-        if self.start_time == -1: self.start_time = msg.timestamp
-        msg.timestamp -= self.start_time
+        if self.start_time_bus == -1: 
+            self.start_time_bus = msg.timestamp
+            self.start_time_cmp = time.time()
+            self.start_date_time_str = datetime.now().strftime("%m-%d-%Y %H:%M:%S")
+            utils.log_warning(f"Start time changed: {msg.timestamp}")
+        if msg.timestamp - self.start_time_bus < 0:
+            utils.log_warning("Out of order")
+        msg.timestamp -= self.start_time_bus
+        #print(msg.timestamp)
         self.new_msg_sig.emit(msg) # TODO: only emit signal if DAQ msg for daq_protocol, currently receives all msgs (low priority performance improvement)
-        if not self.is_paused:
+        if (not self.is_paused or self.is_importing) and not msg.is_error_frame:
+            dbc_msg = None
             try:
                 dbc_msg = self.db.get_message_by_frame_id(msg.arbitration_id)
                 decode = dbc_msg.decode(msg.data)
                 for sig in decode.keys():
-                    utils.signals['Main'][dbc_msg.senders[0]][dbc_msg.name][sig].update(decode[sig], msg.timestamp)
+                    utils.signals[utils.b_str][dbc_msg.senders[0]][dbc_msg.name][sig].update(decode[sig], msg.timestamp)
             except KeyError:
-                utils.log_warning(f"Unrecognized signal key for {msg}")
+                if dbc_msg and "daq" not in dbc_msg.name:
+                    utils.log_warning(f"Unrecognized signal key for {msg}")
+                else:
+                    utils.log_warning(f"unrecognized: {msg.arbitration_id}")
             except ValueError:
-                #utils.log_warning(f"Failed to convert msg: {msg}")
-                pass
+                if "daq" not in dbc_msg.name:
+                    utils.log_warning(f"Failed to convert msg: {msg}")
 
         # bus load estimation
         msg_bit_length_max = 64 + msg.dlc * 8 + 18 
@@ -112,14 +158,10 @@ class CanBus(QtCore.QThread):
 
     def connectError(self):
         """ Creates message box prompting to try to reconnect """
-        msgBox = QtWidgets.QMessageBox(self.parent())
-        msgBox.setIcon(QtWidgets.QMessageBox.Critical)
-        msgBox.setText("Failed to connect to USB Cannable")
-        msgBox.setWindowTitle("Connection Error")
-        msgBox.setStandardButtons(QtWidgets.QMessageBox.Retry | QtWidgets.QMessageBox.Cancel)
-        msgBox.buttons()[0].clicked.connect(self.connect)
-        msgBox.buttons()[1].clicked.connect(quit)
-        msgBox.exec_()
+        self.ip = ConnectionErrorDialog.connectionError(self.ip)
+        if self.ip:
+            self.connect()
+
 
     def updateSignals(self, can_config: dict):
         """ Creates dictionary of BusSignals of all signals in can_config """
@@ -149,7 +191,8 @@ class CanBus(QtCore.QThread):
             msg = self.bus.recv(0.25)
             if msg:
                 delta = time.perf_counter()
-                self.onMessageReceived(msg)
+                if not self.is_importing:
+                    self.onMessageReceived(msg)
                 avg_process_time += time.perf_counter() - delta
             else:
                 skips += 1
@@ -166,6 +209,7 @@ class CanBus(QtCore.QThread):
                 loop_count = 0
                 avg_process_time = 0
                 skips = 0
+        if self.bus: self.bus.shutdown()
 
 
 class BusSignal(QtCore.QObject):
@@ -183,7 +227,7 @@ class BusSignal(QtCore.QObject):
         self.signal_name = signal_name
         self.next_idx = 0
         self.data  = np.zeros(self.history, dtype=d_type)
-        self.times = np.zeros(self.history, np.float)
+        self.times = np.zeros(self.history, dtype=np.float)
         self.color = QtGui.QColor(255, 255, 255)
 
     def connect(self, func: 'function'):
@@ -196,10 +240,10 @@ class BusSignal(QtCore.QObject):
 
     def update(self, val, timestamp):
         """ update the value of the signal """
+        if self.next_idx >= self.history:
+            utils.log_warning(f"{self.signal_name} out of space, resetting!")
+            self.clear()
         with self.data_lock:
-            if self.next_idx >= self.history:
-                utils.log_warning(f"{self.signal_name} out of space, resetting!")
-                self.clear()
             self.data[self.next_idx] = val
             self.times[self.next_idx] = timestamp
             self.next_idx += 1

@@ -1,0 +1,20 @@
+[Unit]
+Description=PER DAQ SERVICE
+# To be placed in /etc/systemd/system
+# use sudo systemctl enable daq_server_service.service to enable 
+# or replace enable with disable to disable, or start or stop
+# or status to check status 
+# Don't forget either run canup.sh or run it in the /etc/rc.local on startup
+
+[Service]
+Type=simple
+User=ubuntu
+Environment="TERM=linux"
+#ExecStartPre=sudo ./home/ubuntu/DAQ/canup.sh
+ExecStart=/home/ubuntu/DAQ/server can0 8080
+StandardOutput=syslog
+StandardError=syslog
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

@@ -49,6 +49,7 @@
     </property>
     <addaction name="actionVariable_Editor"/>
     <addaction name="actionFrame_Viewer"/>
+    <addaction name="actionLog_Exporter"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -65,6 +66,13 @@
     </property>
     <addaction name="actionPreferences"/>
    </widget>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionImport_log"/>
+   </widget>
+   <addaction name="menuFile"/>
    <addaction name="menuEdit_2"/>
    <addaction name="menuEdit"/>
    <addaction name="menuView"/>
@@ -129,6 +137,19 @@
   <action name="actionPreferences">
    <property name="text">
     <string>Preferences</string>
+   </property>
+  </action>
+  <action name="actionLog_Exporter">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Log Exporter</string>
+   </property>
+  </action>
+  <action name="actionImport_log">
+   <property name="text">
+    <string>Import Log</string>
    </property>
   </action>
  </widget>

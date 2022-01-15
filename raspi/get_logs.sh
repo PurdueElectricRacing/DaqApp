@@ -1,0 +1,1 @@
+scp -r pi@raspberrypi:/media/usb/logs ./logs

@@ -34,19 +34,24 @@ class VariableEditor(QtWidgets.QWidget):
         self.ui.stopPubButton.setDisabled(True)
 
         # Add nodes to node selector
-        self.ui.nodeSelector.clear()
-        self.ui.nodeSelector.addItems(utils.signals['Main'].keys())
+        self.updateNodeList()
 
         self.curr_var = None
         self.save_in_prog = False 
         self.changes_unsaved = False
+
+    def updateNodeList(self):
+        """ Update the nodes available in the nodeSelector combo box """
+        self.ui.nodeSelector.clear()
+        self.daq_enabled_nodes = [key for key in utils.signals[utils.b_str].keys() if f"daq_response_{key.upper()}" in utils.signals[utils.b_str][key]]
+        self.ui.nodeSelector.addItems(self.daq_enabled_nodes)
 
     def varSelected(self, item:QtWidgets.QListWidgetItem):
         """ Subscribes to receive updates of the current variable """
         self.ui.selectLbl.setText(f"Editing \"{item.text()}\".")
         self.ui.currValDisp.setText("")
         if self.curr_var: self.curr_var.disconnect(self.handleReceive)
-        self.curr_var = utils.signals['Main'][self.ui.nodeSelector.currentText()][f"daq_response_{self.ui.nodeSelector.currentText().upper()}"][
+        self.curr_var = utils.signals[utils.b_str][self.ui.nodeSelector.currentText()][f"daq_response_{self.ui.nodeSelector.currentText().upper()}"][
                                           self.ui.variableList.currentItem().text()]
         self.curr_var.connect(self.handleReceive)
 
@@ -70,7 +75,10 @@ class VariableEditor(QtWidgets.QWidget):
     def updateVarList(self, idx):
         """ Updates the listed variables based on the selected node """
         self.ui.variableList.clear()
-        self.ui.variableList.addItems([var[1].signal_name for var in utils.signals['Main'][self.ui.nodeSelector.currentText()][f"daq_response_{self.ui.nodeSelector.currentText().upper()}"].items()])
+        try:
+            self.ui.variableList.addItems([var[1].signal_name for var in utils.signals[utils.b_str][self.ui.nodeSelector.currentText()][f"daq_response_{self.ui.nodeSelector.currentText().upper()}"].items()])
+        except KeyError:
+            pass # empty
     
     def readButtonClicked(self):
         """ Requests a variable read operation """

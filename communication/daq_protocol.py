@@ -138,7 +138,7 @@ class DaqProtocol(QtCore.QObject):
             if cmd == DAQ_RPLY_READ or cmd == DAQ_RPLY_PUB:
                 id = (data >> curr_bit) & DAQ_ID_MASK
                 curr_bit += DAQ_ID_LENGTH
-                var = list(utils.signals['Main'][node_name][dbc_msg.name].values())[id]
+                var = list(utils.signals[utils.b_str][node_name][dbc_msg.name].values())[id]
                 if not (cmd == DAQ_RPLY_PUB and self.can_bus.is_paused):
                     var.update((data >> curr_bit) & ~(0xFFFFFFFFFFFFFFFF << var.bit_length), msg.timestamp)
                 curr_bit += var.bit_length
@@ -152,19 +152,19 @@ class DaqProtocol(QtCore.QObject):
                 id = (data >> curr_bit) & DAQ_ID_MASK
                 curr_bit += DAQ_ID_LENGTH
                 print(msg)
-                utils.log_error(f"Failed to read {list(utils.signals['Main'][node_name][dbc_msg.name])[id]}")
+                utils.log_error(f"Failed to read {list(utils.signals[utils.b_str][node_name][dbc_msg.name])[id]}")
             elif cmd == DAQ_RPLY_WRITE_ERROR:
                 id = (data >> curr_bit) & DAQ_ID_MASK
                 curr_bit += DAQ_ID_LENGTH
-                utils.log_error(f"Failed to write to {list(utils.signals['Main'][node_name][dbc_msg.name])[id]}")
+                utils.log_error(f"Failed to write to {list(utils.signals[utils.b_str][node_name][dbc_msg.name])[id]}")
             elif cmd == DAQ_RPLY_SAVE_ERROR:
                 id = (data >> curr_bit) & DAQ_ID_MASK
                 curr_bit += DAQ_ID_LENGTH
-                utils.log_error(f"Failed to save {list(utils.signals['Main'][node_name][dbc_msg.name])[id]}")
+                utils.log_error(f"Failed to save {list(utils.signals[utils.b_str][node_name][dbc_msg.name])[id]}")
             elif cmd == DAQ_RPLY_LOAD_ERROR:
                 id = (data >> curr_bit) & DAQ_ID_MASK
                 curr_bit += DAQ_ID_LENGTH
-                utils.log_error(f"Failed to load {list(utils.signals['Main'][node_name][dbc_msg.name])[id]}")
+                utils.log_error(f"Failed to load {list(utils.signals[utils.b_str][node_name][dbc_msg.name])[id]}")
 
     def updateVarDict(self, daq_config: dict):
         """ Creates dictionary of variable objects from daq configuration"""

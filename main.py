@@ -1,6 +1,7 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
-from pyqtgraph import plot
 from accessory_widgets.frame_viewer import FrameViewer
+from accessory_widgets.log_export import LogExporter
+from accessory_widgets.log_import import LogImporter
 from accessory_widgets.preferences_editor import PreferencesEditor
 from accessory_widgets.variable_editor import VariableEditor
 from display_widgets.plot_widget import PlotWidget
@@ -10,14 +11,24 @@ from communication.daq_protocol import DaqProtocol
 from display_widgets.lcd_widget import LcdDisplay
 from display_widgets.widget_deleter import WidgetDeleter
 from ui.mainWindow import Ui_MainWindow
+import webbrowser
 import qdarkstyle
 import utils
 import json
+import time
 import sys
-from display_widgets.gauge_widget import AnalogGaugeWidget
 
 
-CONFIG_FILE_PATH = "./dashboard.json"
+import os
+
+
+if getattr(sys, 'frozen', False):
+    CurrentPath = sys._MEIPASS
+else:
+    CurrentPath = os.path.dirname(__file__)
+
+#CONFIG_FILE_PATH = os.path.join(CurrentPath, "dashboard.json")
+CONFIG_FILE_PATH = os.path.join(os.getcwd(), "dashboard.json")
 
 class Main(QtWidgets.QMainWindow):
 
@@ -40,8 +51,14 @@ class Main(QtWidgets.QMainWindow):
         self.ui.comlbl = QtWidgets.QLabel()
         self.ui.loadlbl = QtWidgets.QLabel()
         self.ui.loadlbl.setStyleSheet("font:16px;")
+        self.ui.eventTextEdit = QtWidgets.QLineEdit(text='Event')
+        self.ui.eventButton = QtWidgets.QPushButton('Log Event')
+        self.ui.eventButton.setStyleSheet("border-color: black; border-style: outset; border-width: 2px;")
         self.ui.statusbar.addWidget(self.ui.comlbl)
         self.ui.statusbar.addWidget(self.ui.loadlbl)
+        self.ui.statusbar.addWidget(self.ui.eventTextEdit)
+        self.ui.statusbar.addWidget(self.ui.eventButton)
+        self.ui.eventButton.clicked.connect(self.logEvent)
 
         # Menu Bar Tools
         self.ui.play_icon = self.style().standardIcon(getattr(QtWidgets.QStyle, 'SP_MediaPlay'))
@@ -64,6 +81,7 @@ class Main(QtWidgets.QMainWindow):
         self.ui.varEdit = VariableEditor(self.daq_protocol, self.ui.centralwidget)
         self.ui.accessoryLayout.addWidget(self.ui.varEdit)
         self.ui.frameViewer = FrameViewer(self.can_bus)
+        self.ui.logExporter = LogExporter(self.can_bus)
 
         # Dashboard Layout
         self.ui.dashboardLayout = QtWidgets.QGridLayout()
@@ -83,15 +101,19 @@ class Main(QtWidgets.QMainWindow):
         self.max_cols = 1
 
         # Menu Action Connections
+        self.ui.actionImport_log.triggered.connect(lambda : LogImporter.importLog(self.can_bus, self))
         self.ui.actionVariable_Editor.triggered.connect(self.viewVariableEditor)
         self.ui.actionFrame_Viewer.triggered.connect(self.viewFrameViewer)
+        self.ui.actionLog_Exporter.triggered.connect(self.viewLogExporter)
         self.ui.actionLCD.triggered.connect(self.newLCD)
         self.ui.actionPlot.triggered.connect(self.newPlot)
         self.ui.actionRemoveWidget.triggered.connect(self.removeDisplayWidget)
-        self.ui.actionPreferences.triggered.connect(lambda : PreferencesEditor.editPreferences(self))
+        self.ui.actionPreferences.triggered.connect(lambda : PreferencesEditor.editPreferences(self.ui.varEdit, parent=self))
         self.ui.actionPlayPause.triggered.connect(self.playPause)
         self.ui.actionClear.triggered.connect(self.clearData)
         self.ui.actionReconnect.triggered.connect(self.can_bus.reconnect)
+        self.ui.actionAbout.triggered.connect(lambda: webbrowser.open(
+                            'http://confluence.purdueelectricracing.com/display/EL/DAQ'))
 
         self.can_bus.connect()
         self.can_bus.start()
@@ -129,6 +151,15 @@ class Main(QtWidgets.QMainWindow):
         else:
             self.ui.accessoryLayout.removeWidget(self.ui.frameViewer)
             self.ui.frameViewer.hide()
+    
+    def viewLogExporter(self, is_visible: bool):
+        """ Hides or shows the log exporter"""
+        if is_visible:
+            self.ui.accessoryLayout.addWidget(self.ui.logExporter)
+            self.ui.logExporter.show()
+        else:
+            self.ui.accessoryLayout.removeWidget(self.ui.logExporter)
+            self.ui.logExporter.hide()
 
     def newLCD(self):
         """ Adds a new LCD dashboard widget """
@@ -189,7 +220,13 @@ class Main(QtWidgets.QMainWindow):
     def clearData(self):
         """ Clears recorded signal values """
         utils.clearDictItems(utils.signals)
-        self.can_bus.start_time = -1
+        utils.clearEvents()
+        self.can_bus.start_time_bus = -1
+    
+    def logEvent(self):
+        """ Logs and event, recording the timestamp """
+        t = time.time() - self.can_bus.start_time_cmp
+        utils.logEvent(t, self.ui.eventTextEdit.text())
 
     def closeEvent(self, event):
         """ Called on exit of main window """
@@ -208,7 +245,7 @@ if __name__ == "__main__":
 
     # Style Configuration
     app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
-    app.setWindowIcon(QtGui.QIcon('./ui/logo.png'))
+    app.setWindowIcon(QtGui.QIcon(os.path.join(CurrentPath, "ui/logo.png")))
 
     window = Main(config)
     app.exec_()
