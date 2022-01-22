@@ -57,6 +57,7 @@
     </property>
     <addaction name="actionLCD"/>
     <addaction name="actionPlot"/>
+    <addaction name="actionGauge"/>
     <addaction name="separator"/>
     <addaction name="actionRemoveWidget"/>
    </widget>
@@ -150,6 +151,11 @@
   <action name="actionImport_log">
    <property name="text">
     <string>Import Log</string>
+   </property>
+  </action>
+  <action name="actionGauge">
+   <property name="text">
+    <string>Gauge</string>
    </property>
   </action>
  </widget>

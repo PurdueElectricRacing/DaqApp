@@ -108,6 +108,7 @@ class Main(QtWidgets.QMainWindow):
         self.ui.actionLog_Exporter.triggered.connect(self.viewLogExporter)
         self.ui.actionLCD.triggered.connect(self.newLCD)
         self.ui.actionPlot.triggered.connect(self.newPlot)
+        self.ui.actionGauge.triggered.connect(self.newGauge)
         self.ui.actionRemoveWidget.triggered.connect(self.removeDisplayWidget)
         self.ui.actionPreferences.triggered.connect(lambda : PreferencesEditor.editPreferences(self.ui.varEdit, parent=self))
         self.ui.actionPlayPause.triggered.connect(self.playPause)
