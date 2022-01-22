@@ -9,6 +9,7 @@ from display_widgets import plot_widget
 from communication.can_bus import CanBus
 from communication.daq_protocol import DaqProtocol
 from display_widgets.lcd_widget import LcdDisplay
+from display_widgets.gauge_widget import AnalogGaugeWidget
 from display_widgets.widget_deleter import WidgetDeleter
 from ui.mainWindow import Ui_MainWindow
 import webbrowser
@@ -169,6 +170,11 @@ class Main(QtWidgets.QMainWindow):
     def newPlot(self):
         """ Adds a new Plot dashboard widget """
         self.ui.display_widgets.append(PlotWidget(utils.signals, self))
+        self.addDashWidget(self.ui.display_widgets[-1])
+
+    def newGauge(self):
+        """ Adds a new LCD dashboard widget """
+        self.ui.display_widgets.append(AnalogGaugeWidget(utils.signals, self))
         self.addDashWidget(self.ui.display_widgets[-1])
 
     def addDashWidget(self, widget):
