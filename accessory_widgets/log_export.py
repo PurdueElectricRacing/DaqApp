@@ -19,6 +19,7 @@ class LogExporter(QtWidgets.QWidget):
 
         # Signal connections
         self.ui.saveButton.clicked.connect(self.saveLog)
+        self.ui.uploadButton.clicked.connect(self.upload)
         self.ui.formatSelectCombo.currentIndexChanged.connect(self.formatChanged)
     
         # Populate with items
@@ -183,4 +184,8 @@ class LogExporter(QtWidgets.QWidget):
         file_location, _ = QtWidgets.QFileDialog.getSaveFileName(self, filter="*.csv")
         print(file_location)
         np.savetxt(file_location, self.export_array, delimiter=',', fmt='%s', header=self.header)
+
+    def upload(self):
+        # called on press of upload button
+        pass
     

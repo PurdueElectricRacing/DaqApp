@@ -61,6 +61,9 @@ class Ui_logExport(object):
         self.saveButton = QtWidgets.QPushButton(logExport)
         self.saveButton.setObjectName("saveButton")
         self.verticalLayout_2.addWidget(self.saveButton)
+        self.uploadButton = QtWidgets.QPushButton(logExport)
+        self.uploadButton.setObjectName("uploadButton")
+        self.verticalLayout_2.addWidget(self.uploadButton)
         self.horizontalLayout.addLayout(self.verticalLayout_2)
         self.verticalLayout.addLayout(self.horizontalLayout)
 
@@ -75,3 +78,4 @@ class Ui_logExport(object):
         self.label_2.setText(_translate("logExport", "Format:"))
         self.binSizeLabel.setText(_translate("logExport", "Bin Size (ms):"))
         self.saveButton.setText(_translate("logExport", "Save"))
+        self.uploadButton.setText(_translate("logExport", "Upload"))
