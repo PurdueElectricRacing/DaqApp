@@ -39,7 +39,7 @@ class Main(QtWidgets.QMainWindow):
         self.can_config = utils.load_json_config(config['can_config_path'], config['can_schema_path'])
 
         # Can Bus Initialization
-        self.can_bus = CanBus(config['dbc_path'], self.can_config)
+        self.can_bus = CanBus(config['dbc_path'], config['default_ip'], self.can_config)
         self.can_bus.connect_sig.connect(self.updateConnectionStatus)
         self.can_bus.bus_load_sig.connect(self.updateBusLoad)
         self.daq_protocol = DaqProtocol(self.can_bus, self.daq_config)
