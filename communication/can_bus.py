@@ -24,7 +24,7 @@ class CanBus(QtCore.QThread):
     bus_load_sig = QtCore.pyqtSignal(float)
     new_msg_sig = QtCore.pyqtSignal(can.Message)
 
-    def __init__(self, dbc_path, can_config: dict):
+    def __init__(self, dbc_path, default_ip, can_config: dict):
         super(CanBus, self).__init__()
         self.db = cantools.db.load_file(dbc_path)
 
@@ -48,7 +48,7 @@ class CanBus(QtCore.QThread):
         self.is_importing = False
 
         self.port = 8080
-        self.ip = 'ubuntu.local'#'169.254.48.90'
+        self.ip = default_ip
         self.is_wireless = False
 
     
