@@ -176,13 +176,15 @@ class CanBus(QtCore.QThread):
                         utils.signals[bus['bus_name']][node['node_name']] \
                                     [msg['msg_name']][signal['sig_name']]\
                                     = BusSignal(bus['bus_name'], node['node_name'],
-                                                msg['msg_name'], signal['sig_name'], np.dtype('<u'+str(math.ceil(signal['length']/8))))
+                                                msg['msg_name'], signal['sig_name'], 
+                                                (signal['unit'] if 'unit' in signal else ""),
+                                                utils.data_types[signal['type']])
 
     def run(self):
         """ Thread loop to receive can messages """
         self.last_estimate_time = time.time()
         loop_count = 0
-        skips =0
+        skips = 0
         avg_process_time = 0
 
         while self.connected:
@@ -219,12 +221,13 @@ class BusSignal(QtCore.QObject):
     history = 240000 # for 0.015s update period 1 hour of data
     data_lock = threading.Lock()
 
-    def __init__(self, bus_name, node_name, message_name, signal_name, d_type):
+    def __init__(self, bus_name, node_name, message_name, signal_name, unit, d_type):
         super(BusSignal, self).__init__()
         self.bus_name = bus_name
         self.node_name = node_name
         self.message_name = message_name
         self.signal_name = signal_name
+        self.unit = unit
         self.next_idx = 0
         self.data  = np.zeros(self.history, dtype=d_type)
         self.times = np.zeros(self.history, dtype=np.float)
