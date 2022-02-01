@@ -58,7 +58,7 @@ class PlotWidget(WidgetDisplay):
                 else: 
                     self.p1.setXLink(view_box_link)
                 # main plot item
-                self.p1.setLabels(left=signal.signal_name)
+                self.p1.setLabels(left=signal.signal_name + " " + signal.unit)
                 self.p1.getAxis('left').setTextPen(signal.color)
                 self.curves.append(self.p1.plot())
             else:
@@ -75,7 +75,7 @@ class PlotWidget(WidgetDisplay):
                 self.curves.append(pg.PlotCurveItem(pen=signal.color))
                 self.view_boxes[-1].addItem(self.curves[-1])
                 # configure axis settings
-                self.axes[-1].setLabel(signal.signal_name)
+                self.axes[-1].setLabel(signal.signal_name + " " + signal.unit)
                 self.axes[-1].setTextPen(signal.color)
         
         self.p1.vb.sigResized.connect(self.updateViews)

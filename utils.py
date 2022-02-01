@@ -14,6 +14,18 @@ def initGlobals():
     events = []
     global b_str
     b_str = "Main"
+    global data_types
+    data_types = {
+        'uint8_t':np.dtype('<u1'),
+        'uint16_t':np.dtype('<u2'),
+        'uint32_t':np.dtype('<u4'),
+        'uint64_t':np.dtype('<u8'),
+        'int8_t':np.dtype('<i1'),
+        'int16_t':np.dtype('<i2'),
+        'int32_t':np.dtype('<i4'),
+        'int64_t':np.dtype('<i8'),
+        'float':np.dtype('<f4') # 32 bit
+    }
 
 # Logging helper functions
 class bcolors:

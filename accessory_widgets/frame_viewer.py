@@ -54,7 +54,11 @@ class FrameViewer(QtWidgets.QWidget):
         try:
             dbc_msg = self.bus.db.get_message_by_frame_id(msg.arbitration_id)
             try:
-                data = str(self.bus.db.decode_message(msg.arbitration_id, msg.data))
+                #decode_msg = self.bus.db.decode_message(msg.arbitration_id, msg.data)
+                decode_msg = dbc_msg.decode(msg.data)
+                data = ""
+                for idx, sig in enumerate(decode_msg):
+                    data += str(sig)+": "+"{:.3f}".format(decode_msg[sig])+" "+(dbc_msg.signals[idx].unit if dbc_msg.signals[idx].unit else "")+", "
             except ValueError:
                 data = hex(int.from_bytes(msg.data, "little"))
         except KeyError:
