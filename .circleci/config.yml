@@ -8,19 +8,23 @@ jobs:
   build-exec:
     # Specify the execution environment. You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
     # See: https://circleci.com/docs/2.0/configuration-reference/#docker-machine-macos-windows-executor
-    docker:
-      - image: adambusch/per_firmware:latest
-    resource_class: small
+    machine:
+      image: windows-default
+    # docker:
+    #   - image: adambusch/per_firmware:latest
+    resource_class: windows.medium
     # Add steps to the job
     # See: https://circleci.com/docs/2.0/configuration-reference/#steps
     steps:
       - checkout
       - run:
+          command: echo hello
+      - run:
           name: "Prepare Libraries"
           command: "pip3 install pyinstaller"
       - run:
           name: "Build"
-          command: "python3 -m PyInstaller ./main.spec"
+          command: "python3 -m PyInstaller --onefile ./main.spec"
       - run:
           name: "Prepare Artifacts"
           command: |
