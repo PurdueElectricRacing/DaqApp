@@ -12,8 +12,8 @@ added_files = [
     #('C:\\Windows\\System32\\libusb0.dll', '.'),
     #('C:\\Windows\\System32\\libusb-1.0.dll', '.')
 binaries = [
-    ('libusb0.dll', '.'),
-    ('libusb-1.0.dll', '.')
+    ('.\dependent_binaries\libusb0.dll', '.'),
+    ('.\dependent_binaries\libusb-1.0.dll', '.')
 ]
 
 paths = []

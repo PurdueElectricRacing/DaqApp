@@ -8,12 +8,9 @@ orbs:
 # Define a job to be invoked later in a workflow.
 # See: https://circleci.com/docs/2.0/configuration-reference/#jobs
 jobs:
-  build-exec:
+  build:
     # Specify the execution environment. You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
     # See: https://circleci.com/docs/2.0/configuration-reference/#docker-machine-macos-windows-executor
-    # docker:
-    #   - image: adambusch/per_firmware:latest
-    #resource_class: windows.medium
     executor:
       name: win/default
       shell: powershell.exe
@@ -21,11 +18,6 @@ jobs:
     # See: https://circleci.com/docs/2.0/configuration-reference/#steps
     steps:
       - checkout
-      #- run: systeminfo
-      #- run:
-      #    command: echo hello
-      #- run:
-      #    command: ls
       - run:
           command: "python -m pip install -r requirements.txt"
       - run:
@@ -39,15 +31,25 @@ jobs:
           command: |
             mkdir artifacts
             cp .\dist\*.exe .\artifacts\
-            cd artifacts
-            ls
-            cd ..
+            cp .\dashboard.json .\artifacts\
       - store_artifacts:
           path: artifacts
+      - run: 
+          name: "Publish Release on GitHub"
+          command: |
+            VERSION=0.0.0
+            ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -delete ${VERSION} ./artifacts/
+
+      
 
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
 workflows:
-  build-workflow:
+  main:
     jobs:
-      - build-exec
+      - build:
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^\d+\.\d+\.\d+$/
