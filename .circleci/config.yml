@@ -16,6 +16,9 @@ jobs:
     steps:
       - checkout
       - run:
+          name: "Prepare Libraries"
+          command: "pip3 install pyinstaller"
+      - run:
           name: "Build"
           command: "python3 pyinstaller ./main.spec"
       - run:
