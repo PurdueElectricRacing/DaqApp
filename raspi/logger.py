@@ -4,12 +4,14 @@ import subprocess
 import os
 
 INPUT_PIN = 26
+LED_PIN = 19
 LOG_DURATION = 15 #minutes
 USB = "/media/usb"
 LOG_LOCATION = os.path.join(USB, 'logs')
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(INPUT_PIN, GPIO.IN)
+GPIO.setup(LED_PIN, GPIO.OUT)
 
 logging = False
 start_time = 0
@@ -68,6 +70,8 @@ def mountLoop():
 
 mountLoop()
 
+led_state = False
+
 try:
     while True:
         log_pin_on = GPIO.input(INPUT_PIN)
@@ -89,6 +93,11 @@ try:
 
         if logging and (time.time() - start_time) / 60.0 > LOG_DURATION:
             switchLogFile()
+        
+        if logging:
+            if led_state: GPIO.output(LED_PIN, GPIO.LOW)
+            else: GPIO.output(LED_PIN, GPIO.HIGH)
+            led_state = not led_state
 
         time.sleep(1)
 
