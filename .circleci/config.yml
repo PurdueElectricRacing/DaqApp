@@ -39,6 +39,10 @@ jobs:
           command: |
             mkdir artifacts
             "cp .\dist\main.exe artifacts"
+            cd artifacts
+            echo "hello" > hello.txt
+            ls
+            cd ..
       - store_artifacts:
           path: artifacts
 
