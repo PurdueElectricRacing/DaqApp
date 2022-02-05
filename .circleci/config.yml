@@ -25,11 +25,15 @@ jobs:
       - run:
           command: echo hello
       - run:
+          command: ls
+      - run:
+          command: "python -m pip install -r requirements.txt"
+      - run:
           name: "Prepare Libraries"
-          command: "pip3 install pyinstaller"
+          command: "python -m pip install pyinstaller"
       - run:
           name: "Build"
-          command: "python3 -m PyInstaller --onefile ./main.spec"
+          command: "python -m PyInstaller --onefile ./main.spec"
       - run:
           name: "Prepare Artifacts"
           command: |
