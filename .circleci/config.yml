@@ -2,21 +2,26 @@
 # See: https://circleci.com/docs/2.0/configuration-reference
 version: 2.1
 
+orbs:
+  win: circleci/windows@2.2.0
+
 # Define a job to be invoked later in a workflow.
 # See: https://circleci.com/docs/2.0/configuration-reference/#jobs
 jobs:
   build-exec:
     # Specify the execution environment. You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
     # See: https://circleci.com/docs/2.0/configuration-reference/#docker-machine-macos-windows-executor
-    machine:
-      image: windows-default
     # docker:
     #   - image: adambusch/per_firmware:latest
-    resource_class: windows.medium
+    #resource_class: windows.medium
+    executor:
+      name: win/default
+      shell: powershell.exe
     # Add steps to the job
     # See: https://circleci.com/docs/2.0/configuration-reference/#steps
     steps:
       - checkout
+      - run: systeminfo
       - run:
           command: echo hello
       - run:
