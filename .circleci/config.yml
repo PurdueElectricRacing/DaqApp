@@ -20,7 +20,7 @@ jobs:
           command: "pip3 install pyinstaller"
       - run:
           name: "Build"
-          command: "python3 pyinstaller ./main.spec"
+          command: "python3 -m PyInstaller ./main.spec"
       - run:
           name: "Prepare Artifacts"
           command: |
