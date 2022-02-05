@@ -38,9 +38,8 @@ jobs:
           name: "Prepare Artifacts"
           command: |
             mkdir artifacts
-            "cp .\dist\main.exe artifacts"
+            cp .\dist\*.exe .\artifacts\
             cd artifacts
-            echo "hello" > hello.txt
             ls
             cd ..
       - store_artifacts:
