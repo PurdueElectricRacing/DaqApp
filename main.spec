@@ -9,9 +9,11 @@ added_files = [
     ('ui/logo.png', 'ui/logo.png')
 ]
 
+    #('C:\\Windows\\System32\\libusb0.dll', '.'),
+    #('C:\\Windows\\System32\\libusb-1.0.dll', '.')
 binaries = [
-    ('C:\\Windows\\System32\\libusb0.dll', '.'),
-    ('C:\\Windows\\System32\\libusb-1.0.dll', '.')
+    ('libusb0.dll', '.'),
+    ('libusb-1.0.dll', '.')
 ]
 
 paths = []

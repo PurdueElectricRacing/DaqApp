@@ -21,11 +21,11 @@ jobs:
     # See: https://circleci.com/docs/2.0/configuration-reference/#steps
     steps:
       - checkout
-      - run: systeminfo
-      - run:
-          command: echo hello
-      - run:
-          command: ls
+      #- run: systeminfo
+      #- run:
+      #    command: echo hello
+      #- run:
+      #    command: ls
       - run:
           command: "python -m pip install -r requirements.txt"
       - run:
