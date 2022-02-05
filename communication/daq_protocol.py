@@ -32,7 +32,7 @@ class DAQVariable(BusSignal):
     def __init__(self, bus_name, node_name, message_name, signal_name, daq_id, read_only, 
                  bit_length, eeprom_enabled):
         super(DAQVariable, self).__init__(bus_name, node_name, 
-                                          message_name, signal_name, np.dtype('<u'+str(math.ceil(bit_length/8))))
+                                          message_name, signal_name, "", np.dtype('<u'+str(math.ceil(bit_length/8))))
         self.id = daq_id
         self.read_only = read_only
         self.bit_length = bit_length
