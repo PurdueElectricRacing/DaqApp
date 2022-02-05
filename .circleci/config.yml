@@ -38,7 +38,7 @@ jobs:
           name: "Prepare Artifacts"
           command: |
             mkdir artifacts
-            cp "./dist"/*.exe" artifacts
+            "cp .\dist\main.exe .\artifacts\"
       - store_artifacts:
           path: artifacts
 
