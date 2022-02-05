@@ -34,10 +34,10 @@ jobs:
             cp .\dashboard.json .\artifacts\
       - store_artifacts:
           path: artifacts
-      - run: 
-          name: "Publish Release on GitHub"
-          command: |
-            ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ./artifacts/
+      # - run: 
+      #     name: "Publish Release on GitHub"
+      #     command: |
+      #       ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ./artifacts/
 
       
 
