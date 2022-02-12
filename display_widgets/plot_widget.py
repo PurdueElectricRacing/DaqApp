@@ -1,3 +1,4 @@
+from select import select
 from display_widgets.widget_display import WidgetDisplay
 from PyQt5 import QtWidgets
 import pyqtgraph as pg
@@ -11,7 +12,7 @@ view_box_link = None
 class PlotWidget(WidgetDisplay):
     """ Plots signals versus time """
     
-    def __init__(self, signals: dict, parent=None, fps=15):
+    def __init__(self, signals: dict, parent=None, fps=15, selected_signals=[]):
         super(PlotWidget, self).__init__(signals, labels=['Axis 1', 'Axis 2', 'Axis 3', 'Axis 4', 'Axis 5'], parent=parent)
         self.fps = fps
 
@@ -27,7 +28,9 @@ class PlotWidget(WidgetDisplay):
         self.axes = []
         self.curves = []
 
-        self.initPlot()
+        self.configureSignals(selected_signals)
+        title = "" if len(self.current_signals) > 0 else "dbl click"
+        self.initPlot(title=title)
 
     def initPlot(self, title="dbl click"):
         """ Resets plot, generates view boxes and axes for selected signals """

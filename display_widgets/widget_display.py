@@ -30,12 +30,15 @@ class WidgetDisplay(QtWidgets.QWidget):
         # Don't do anything if you didn't pick anything
         if len(signals) == 0: return
 
-        self.current_signals = signals
+        self.configureSignals(signals)
 
+        return super().mouseDoubleClickEvent(a0)
+    
+    def configureSignals(self, signals):
+        if len(signals) == 0: return
+        self.current_signals = signals
         for signal in self.current_signals:
             # TODO: if having all signals call updateDisplay is too intensive, able to have an update function per signal?
             signal.connect(self.updateDisplay)
-
         self.signalsChanged()
         self.updateDisplay()
-        return super().mouseDoubleClickEvent(a0)

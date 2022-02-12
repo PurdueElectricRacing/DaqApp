@@ -54,6 +54,7 @@ class CanBus(QtCore.QThread):
     
     def connect(self):
         """ Connects to the bus """
+        utils.log("Trying usb")
         # Attempt usb connection first
         dev = usb.core.find(idVendor=0x1D50, idProduct=0x606F)
         if dev:
@@ -67,9 +68,11 @@ class CanBus(QtCore.QThread):
             self.connected = True
             self.is_wireless = False
             self.connect_sig.emit(self.connected)
+            utils.log("Usb successful")
             return
 
         # Usb failed, trying tcp
+        utils.log("Trying tcp")
         try:
             self.bus = TCPBus(self.ip, self.port)
             self.connected = True
@@ -79,8 +82,9 @@ class CanBus(QtCore.QThread):
             i=0
             while(self.bus.recv(0)): 
                 i+=1
-            print(i)
+            utils.log(f"cleared {i} from buffer")
             self.connect_sig.emit(self.connected)
+            utils.log("Tcp successful")
             return
         except OSError:
             pass # failed to connect
@@ -96,9 +100,11 @@ class CanBus(QtCore.QThread):
         while(not self.isFinished()):
             # wait for bus receive to finish
             pass
-        self.bus.shutdown()
-        if not self.is_wireless: usb.util.dispose_resources(self.bus.gs_usb.gs_usb)
-        del(self.bus)
+        if self.bus:
+            self.bus.shutdown()
+            if not self.is_wireless: usb.util.dispose_resources(self.bus.gs_usb.gs_usb)
+            del(self.bus)
+            self.bus = None
         self.connect()
         self.start()
         utils.clearDictItems(utils.signals)

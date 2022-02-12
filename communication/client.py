@@ -27,6 +27,8 @@ class TCPBus(can.BusABC):
         self._shutdown_flag = Queue()
 
         #open socket and wait for connection to establish.
+        socket.setdefaulttimeout(3) # seconds
+        print("attempting to connect to tcp")
         self._conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
         self._conn.connect((ip, port))
         print("connected")

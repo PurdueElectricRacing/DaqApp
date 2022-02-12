@@ -10,8 +10,9 @@ USB = "/media/usb"
 LOG_LOCATION = os.path.join(USB, 'logs')
 
 GPIO.setmode(GPIO.BCM)
-GPIO.setup(INPUT_PIN, GPIO.IN)
+GPIO.setup(INPUT_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 GPIO.setup(LED_PIN, GPIO.OUT)
+GPIO.output(LED_PIN, GPIO.LOW)
 
 logging = False
 start_time = 0
@@ -30,8 +31,8 @@ def mountUsb():
             if os.path.realpath(path).find('/usb') > 0:
                 print(f"/dev/{device} -> {USB}")
                 os.system(f"sudo mkdir {USB} 2>/dev/null")
-                os.system(f"sudo chown -R pi:pi {USB} 2>/dev/null")
-                os.system(f"mount /dev/{device} {USB} -o uid=pi,gid=pi 2>/dev/null")
+                os.system(f"sudo chown -R ubuntu:ubuntu {USB} 2>/dev/null")
+                os.system(f"mount /dev/{device} {USB} -o uid=ubuntu,gid=ubuntu 2>/dev/null")
     if len(os.listdir(USB)) > 0:
         print("USB connected")
         return False
@@ -43,6 +44,7 @@ def logProcessCreate():
     return subprocess.Popen(["candump", "-tA", "-l", "can0"], cwd=LOG_LOCATION)
 
 def startLog():
+    GPIO.output(LED_PIN, GPIO.HIGH)
     global start_time
     global curr_proc
     if curr_proc: stopLog()
@@ -50,6 +52,7 @@ def startLog():
     curr_proc = logProcessCreate()
 
 def stopLog():
+    GPIO.output(LED_PIN, GPIO.LOW)
     global curr_proc
     curr_proc.terminate()
 
@@ -69,8 +72,6 @@ def mountLoop():
     print("USB drive mounted")
 
 mountLoop()
-
-led_state = False
 
 try:
     while True:
@@ -93,13 +94,9 @@ try:
 
         if logging and (time.time() - start_time) / 60.0 > LOG_DURATION:
             switchLogFile()
-        
-        if logging:
-            if led_state: GPIO.output(LED_PIN, GPIO.LOW)
-            else: GPIO.output(LED_PIN, GPIO.HIGH)
-            led_state = not led_state
 
         time.sleep(1)
 
 except KeyboardInterrupt:
+    GPIO.cleanup()
     print("closing logger")

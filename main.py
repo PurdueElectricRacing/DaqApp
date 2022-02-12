@@ -19,6 +19,7 @@ import time
 import sys
 import os
 
+# File location changes when converted to exe
 if getattr(sys, 'frozen', False):
     CurrentPath = sys._MEIPASS
 else:
@@ -105,12 +106,14 @@ class Main(QtWidgets.QMainWindow):
         self.ui.actionLCD.triggered.connect(self.newLCD)
         self.ui.actionPlot.triggered.connect(self.newPlot)
         self.ui.actionRemoveWidget.triggered.connect(self.removeDisplayWidget)
+        self.ui.actionLoad_View.triggered.connect(self.loadView)
+        self.ui.actionSave_View.triggered.connect(self.saveView)
         self.ui.actionPreferences.triggered.connect(lambda : PreferencesEditor.editPreferences(self.ui.varEdit, parent=self))
         self.ui.actionPlayPause.triggered.connect(self.playPause)
         self.ui.actionClear.triggered.connect(self.clearData)
         self.ui.actionReconnect.triggered.connect(self.can_bus.reconnect)
         self.ui.actionAbout.triggered.connect(lambda: webbrowser.open(
-                            'http://confluence.purdueelectricracing.com/display/EL/DAQ'))
+                            'http://128.46.98.238/display/EL/Data+Acquisition'))
 
         self.can_bus.connect()
         self.can_bus.start()
@@ -204,6 +207,88 @@ class Main(QtWidgets.QMainWindow):
         self.max_cols = 1
         for w in self.ui.display_widgets:
             self.addDashWidget(w)
+
+    def loadView(self):
+        """ Loads a widget display from a file, clears the current view"""
+
+        # Load file
+        file_loc, _ = QtWidgets.QFileDialog.getOpenFileName(self, filter="*.daqview")
+
+        # Check no file
+        if not file_loc: return
+        config = None
+        with open(file_loc, 'r') as f:
+            config = f.read()
+        if not config:
+            utils.log_error(f"Invalid view file: {file_loc}")
+            return
+
+        # Parse
+        new_display_widgets = []
+        widgets = config.split(';')
+        for w in widgets[:-1]:
+            name, sigs = w.split(':')
+            sig_def = json.loads(sigs) 
+            chosen_sigs = []
+            for sig in sig_def[0]:
+                if sig[0] != utils.b_str:
+                    utils.log_warning(f"Adding signal on bus {sig[0]}, but currently on bus {utils.b_str}")
+                try:
+                    chosen_sigs.append(utils.signals[sig[0]][sig[1]][sig[2]][sig[3]])
+                    # set color
+                    chosen_sigs[-1].color = QtGui.QColor(*sig[4])
+                except KeyError:
+                    utils.log_error(f"Unrecognized signal key for {sig[3]}")
+                    return
+            if 'PlotWidget' in name:
+                new_display_widgets.append(PlotWidget(utils.signals, parent=self, selected_signals=chosen_sigs))
+            elif 'LcdDisplay' in name:
+                new_display_widgets.append(LcdDisplay(utils.signals, parent=self, selected_signals=chosen_sigs))
+            else:
+                utils.log_error(f"Invalid widget type {name}")
+                return
+
+        # Clear current view
+        for w in self.ui.display_widgets:
+            self.ui.dashboardLayout.removeWidget(w)
+            w.destroy()
+            self.ui.display_widgets.remove(w)
+        # Reset axis link (in case the plot that all the
+        #                  axes were linked to was deleted)
+        plot_widget.view_box_link = None
+        self.curr_loc = [0, 0]
+        self.max_rows = 1
+        self.max_cols = 1
+
+        # add
+        for w in new_display_widgets:
+            self.ui.display_widgets.append(w)
+            self.addDashWidget(self.ui.display_widgets[-1])
+
+    """
+    PlotWidget:[(bus, node, message, sig, (r,g,b,a)),
+                (bus, node, message, sig, (r,g,b,a))];
+    PlotWidget:[(bus, node, message, sig, (r,g,b,a)),];
+    """
+    
+    def saveView(self):
+        """ Saves the current widget display"""
+        output_data = ""
+        for w in self.ui.display_widgets:
+            w_str = ""
+            if type(w) is PlotWidget:
+                w_str = "PlotWidget:["
+            elif type(w) is LcdDisplay:
+                w_str = "LcdDisplay:["
+            else:
+                pass
+            sigs = [[sig.bus_name,sig.node_name, sig.message_name, sig.signal_name, list(sig.color.getRgb())] for sig in w.current_signals]
+            w_str += str(sigs).replace("'","\"") + "];\n"
+            output_data += w_str
+
+        file_location, _ = QtWidgets.QFileDialog.getSaveFileName(self, filter="*.daqview")
+        with open(file_location, 'w') as f:
+            f.write(output_data)
 
     def playPause(self):
         """ Start recording signal values """
