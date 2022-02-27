@@ -26,6 +26,10 @@ def initGlobals():
         'int64_t':np.dtype('<i8'),
         'float':np.dtype('<f4') # 32 bit
     }
+    global debug_mode
+    debug_mode = False
+    global dark_mode
+    dark_mode = False
 
 # Logging helper functions
 class bcolors:
@@ -43,13 +47,14 @@ def log_error(phrase):
     print(f"{bcolors.FAIL}ERROR: {phrase}{bcolors.ENDC}")
 
 def log_warning(phrase):
-    print(f"{bcolors.WARNING}WARNING: {phrase}{bcolors.ENDC}")
+    log(f"{bcolors.WARNING}WARNING: {phrase}{bcolors.ENDC}")
 
 def log_success(phrase):
-    print(f"{bcolors.OKGREEN}{phrase}{bcolors.ENDC}")
+    log(f"{bcolors.OKGREEN}{phrase}{bcolors.ENDC}")
 
 def log(phrase):
-    print(phrase)
+    global debug_mode
+    if debug_mode: print(phrase)
 
 def load_json_config(config_path, schema_path):
     """ loads config from json and validates with schema """

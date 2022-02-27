@@ -326,8 +326,12 @@ if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
 
     # Style Configuration
-    app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+    if config['dark_mode']:
+        app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
     app.setWindowIcon(QtGui.QIcon(os.path.join(CurrentPath, "ui/logo.png")))
+
+    utils.debug_mode = config['debug']
+    utils.dark_mode = config['dark_mode']
 
     window = Main(config)
     app.exec_()

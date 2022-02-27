@@ -28,10 +28,10 @@ class TCPBus(can.BusABC):
 
         #open socket and wait for connection to establish.
         socket.setdefaulttimeout(3) # seconds
-        print("attempting to connect to tcp")
+        utils.log("attempting to connect to tcp")
         self._conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
         self._conn.connect((ip, port))
-        print("connected")
+        utils.log("connected")
         self._is_connected = True
         self._conn.settimeout(0.5) #blocking makes exiting an infinite loop hard
 

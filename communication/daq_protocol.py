@@ -151,7 +151,7 @@ class DaqProtocol(QtCore.QObject):
             elif cmd == DAQ_RPLY_READ_ERROR:
                 id = (data >> curr_bit) & DAQ_ID_MASK
                 curr_bit += DAQ_ID_LENGTH
-                print(msg)
+                utils.log(msg)
                 utils.log_error(f"Failed to read {list(utils.signals[utils.b_str][node_name][dbc_msg.name])[id]}")
             elif cmd == DAQ_RPLY_WRITE_ERROR:
                 id = (data >> curr_bit) & DAQ_ID_MASK
