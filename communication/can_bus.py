@@ -28,8 +28,8 @@ class CanBus(QtCore.QThread):
         super(CanBus, self).__init__()
         self.db = cantools.db.load_file(dbc_path)
 
-        print(f"CAN version: {can.__version__}")
-        print(f"gs_usb version: {gs_usb.__version__}")
+        utils.log(f"CAN version: {can.__version__}")
+        utils.log(f"gs_usb version: {gs_usb.__version__}")
 
         self.connected = False
         self.bus = None
@@ -54,6 +54,7 @@ class CanBus(QtCore.QThread):
     
     def connect(self):
         """ Connects to the bus """
+        utils.log("Trying usb")
         # Attempt usb connection first
         dev = usb.core.find(idVendor=0x1D50, idProduct=0x606F)
         if dev:
@@ -67,9 +68,11 @@ class CanBus(QtCore.QThread):
             self.connected = True
             self.is_wireless = False
             self.connect_sig.emit(self.connected)
+            utils.log("Usb successful")
             return
 
         # Usb failed, trying tcp
+        utils.log("Trying tcp")
         try:
             self.bus = TCPBus(self.ip, self.port)
             self.connected = True
@@ -79,8 +82,9 @@ class CanBus(QtCore.QThread):
             i=0
             while(self.bus.recv(0)): 
                 i+=1
-            print(i)
+            utils.log(f"cleared {i} from buffer")
             self.connect_sig.emit(self.connected)
+            utils.log("Tcp successful")
             return
         except OSError:
             pass # failed to connect
@@ -96,9 +100,11 @@ class CanBus(QtCore.QThread):
         while(not self.isFinished()):
             # wait for bus receive to finish
             pass
-        self.bus.shutdown()
-        if not self.is_wireless: usb.util.dispose_resources(self.bus.gs_usb.gs_usb)
-        del(self.bus)
+        if self.bus:
+            self.bus.shutdown()
+            if not self.is_wireless: usb.util.dispose_resources(self.bus.gs_usb.gs_usb)
+            del(self.bus)
+            self.bus = None
         self.connect()
         self.start()
         utils.clearDictItems(utils.signals)
@@ -130,7 +136,6 @@ class CanBus(QtCore.QThread):
         if msg.timestamp - self.start_time_bus < 0:
             utils.log_warning("Out of order")
         msg.timestamp -= self.start_time_bus
-        #print(msg.timestamp)
         self.new_msg_sig.emit(msg) # TODO: only emit signal if DAQ msg for daq_protocol, currently receives all msgs (low priority performance improvement)
         if (not self.is_paused or self.is_importing) and not msg.is_error_frame:
             dbc_msg = None
@@ -141,12 +146,12 @@ class CanBus(QtCore.QThread):
                     utils.signals[utils.b_str][dbc_msg.senders[0]][dbc_msg.name][sig].update(decode[sig], msg.timestamp)
             except KeyError:
                 if dbc_msg and "daq" not in dbc_msg.name:
-                    utils.log_warning(f"Unrecognized signal key for {msg}")
+                    if utils.debug_mode: utils.log_warning(f"Unrecognized signal key for {msg}")
                 else:
-                    utils.log_warning(f"unrecognized: {msg.arbitration_id}")
+                    if utils.debug_mode: utils.log_warning(f"unrecognized: {msg.arbitration_id}")
             except ValueError:
                 if "daq" not in dbc_msg.name:
-                    utils.log_warning(f"Failed to convert msg: {msg}")
+                    if utils.debug_mode: utils.log_warning(f"Failed to convert msg: {msg}")
 
         # bus load estimation
         msg_bit_length_max = 64 + msg.dlc * 8 + 18 
@@ -207,7 +212,7 @@ class CanBus(QtCore.QThread):
                 self.total_bits = 0
                 self.bus_load_sig.emit(bus_load)
 
-                if loop_count != 0 and loop_count-skips != 0: print(f"rx period (ms): {1/loop_count*1000}, skipped: {skips}, process time (ms): {avg_process_time / (loop_count-skips)*1000}")
+                if loop_count != 0 and loop_count-skips != 0 and utils.debug_mode: print(f"rx period (ms): {1/loop_count*1000}, skipped: {skips}, process time (ms): {avg_process_time / (loop_count-skips)*1000}")
                 loop_count = 0
                 avg_process_time = 0
                 skips = 0
@@ -232,6 +237,8 @@ class BusSignal(QtCore.QObject):
         self.data  = np.zeros(self.history, dtype=d_type)
         self.times = np.zeros(self.history, dtype=np.float)
         self.color = QtGui.QColor(255, 255, 255)
+        if not utils.dark_mode:
+            self.color = QtGui.QColor(0,0,0)
 
     def connect(self, func: 'function'):
         """ call func each time signal updated """

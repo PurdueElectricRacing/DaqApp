@@ -181,6 +181,6 @@ class LogExporter(QtWidgets.QWidget):
     
     def saveArray(self):
         file_location, _ = QtWidgets.QFileDialog.getSaveFileName(self, filter="*.csv")
-        print(file_location)
+        utils.log(file_location)
         np.savetxt(file_location, self.export_array, delimiter=',', fmt='%s', header=self.header)
     

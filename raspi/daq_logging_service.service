@@ -11,7 +11,7 @@ Type=simple
 User=ubuntu
 Environment="TERM=linux"
 WorkingDirectory=/home/ubuntu/DAQ
-ExecStart=sudo /usr/bin/python3 /home/ubuntu/DAQ/logger.py
+ExecStart=/usr/bin/sudo /usr/bin/python3 /home/ubuntu/DAQ/logger.py
 StandardOutput=syslog
 StandardError=syslog
 Restart=always

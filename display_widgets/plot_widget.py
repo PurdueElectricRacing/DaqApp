@@ -1,5 +1,6 @@
+from select import select
 from display_widgets.widget_display import WidgetDisplay
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, QtGui
 import pyqtgraph as pg
 import time
 import utils
@@ -11,7 +12,7 @@ view_box_link = None
 class PlotWidget(WidgetDisplay):
     """ Plots signals versus time """
     
-    def __init__(self, signals: dict, parent=None, fps=15):
+    def __init__(self, signals: dict, parent=None, fps=15, selected_signals=[]):
         super(PlotWidget, self).__init__(signals, labels=['Axis 1', 'Axis 2', 'Axis 3', 'Axis 4', 'Axis 5'], parent=parent)
         self.fps = fps
 
@@ -20,6 +21,8 @@ class PlotWidget(WidgetDisplay):
 
         # Create plot widget
         self.pw = pg.PlotWidget()
+        if not utils.dark_mode:
+            self.pw.setBackground('w')
         self.layout.addWidget(self.pw)
         self.p1 = self.pw.plotItem
 
@@ -27,7 +30,9 @@ class PlotWidget(WidgetDisplay):
         self.axes = []
         self.curves = []
 
-        self.initPlot()
+        self.configureSignals(selected_signals)
+        title = "" if len(self.current_signals) > 0 else "dbl click"
+        self.initPlot(title=title)
 
     def initPlot(self, title="dbl click"):
         """ Resets plot, generates view boxes and axes for selected signals """
@@ -60,6 +65,8 @@ class PlotWidget(WidgetDisplay):
                 # main plot item
                 self.p1.setLabels(left=signal.signal_name + " " + signal.unit)
                 self.p1.getAxis('left').setTextPen(signal.color)
+                if not utils.dark_mode:
+                    self.p1.getAxis('bottom').setTextPen(QtGui.QColor(0, 0, 0))
                 self.curves.append(self.p1.plot())
             else:
                 self.view_boxes.append(pg.ViewBox())
@@ -102,7 +109,7 @@ class PlotWidget(WidgetDisplay):
             self.count += 1
             if (self.count % 20 == 0):
                 self.count = 0
-                print(f"delta: {self.current_signals[0].signal_name}: {time.perf_counter() - st}")
+                utils.log(f"delta: {self.current_signals[0].signal_name}: {time.perf_counter() - st}")
     
     def updateViews(self):
         """ Updates other view boxes if main view box is moved """

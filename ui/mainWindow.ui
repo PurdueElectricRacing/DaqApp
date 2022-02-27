@@ -59,6 +59,9 @@
     <addaction name="actionPlot"/>
     <addaction name="separator"/>
     <addaction name="actionRemoveWidget"/>
+    <addaction name="separator"/>
+    <addaction name="actionLoad_View"/>
+    <addaction name="actionSave_View"/>
    </widget>
    <widget class="QMenu" name="menuEdit_2">
     <property name="title">
@@ -150,6 +153,16 @@
   <action name="actionImport_log">
    <property name="text">
     <string>Import Log</string>
+   </property>
+  </action>
+  <action name="actionLoad_View">
+   <property name="text">
+    <string>Load View</string>
+   </property>
+  </action>
+  <action name="actionSave_View">
+   <property name="text">
+    <string>Save View</string>
    </property>
   </action>
  </widget>

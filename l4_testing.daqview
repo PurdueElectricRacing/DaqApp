@@ -1,0 +1,2 @@
+PlotWidget:[[["Test","TEST_NODE","adc_values","pot1",[255, 0, 0, 255]], ["Test","TEST_NODE","adc_values","pot2", [85, 255, 0, 255]], ["Test","TEST_NODE","adc_values","pot3",[0, 0, 255, 255]]]];
+PlotWidget:[[["Test","TEST_NODE","test_msg","test_sig",[0, 255, 0, 255]], ["Test","TEST_NODE","test_msg2","test_sig2", [255, 85, 255, 255]]]];

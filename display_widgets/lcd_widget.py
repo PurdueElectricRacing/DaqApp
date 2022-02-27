@@ -7,7 +7,7 @@ from display_widgets.widget_display import WidgetDisplay
 class LcdDisplay(WidgetDisplay):
     """ LCD Display Widget """
 
-    def __init__(self, signals: dict, parent=None):
+    def __init__(self, signals: dict, parent=None, selected_signals=[]):
         super(LcdDisplay, self).__init__(signals, labels=['Signal'], parent=parent)
 
         self.layout = QVBoxLayout()
@@ -28,6 +28,8 @@ class LcdDisplay(WidgetDisplay):
         # Forces lcd closer to label
         self.verticalSpacer = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.layout.addItem(self.verticalSpacer)
+
+        self.configureSignals(selected_signals)
 
     def updateDisplay(self):
         """ Called each time signal value updated """

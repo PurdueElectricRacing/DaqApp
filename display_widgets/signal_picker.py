@@ -24,6 +24,8 @@ class SignalPicker(QtWidgets.QDialog):
         self.ui.nodeCombo.addItems(self.signals[utils.b_str].keys())
 
         self.color = QtGui.QColor(255, 255, 255)
+        if not utils.dark_mode:
+            self.color = QtGui.QColor(0, 0, 0)
 
         # Set current selection
         if curr_signal != None:
