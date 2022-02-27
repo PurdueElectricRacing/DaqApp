@@ -25,7 +25,6 @@ if getattr(sys, 'frozen', False):
 else:
     CurrentPath = os.path.dirname(__file__)
 
-#CONFIG_FILE_PATH = os.path.join(CurrentPath, "dashboard.json")
 CONFIG_FILE_PATH = os.path.join(os.getcwd(), "dashboard.json")
 
 class Main(QtWidgets.QMainWindow):
