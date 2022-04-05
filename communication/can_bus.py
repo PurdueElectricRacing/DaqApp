@@ -211,7 +211,6 @@ class CanBus(QtCore.QThread):
                 bus_load = self.total_bits / 500000.0 * 100
                 self.total_bits = 0
                 self.bus_load_sig.emit(bus_load)
-
                 if loop_count != 0 and loop_count-skips != 0 and utils.debug_mode: print(f"rx period (ms): {1/loop_count*1000}, skipped: {skips}, process time (ms): {avg_process_time / (loop_count-skips)*1000}")
                 loop_count = 0
                 avg_process_time = 0

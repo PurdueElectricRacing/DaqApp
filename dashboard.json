@@ -7,5 +7,5 @@
     "default_ip": "ubuntu.local",
     "the ubiquiti ip:":"192.168.10.40",
     "dark_mode": false,
-    "debug": false
+    "debug": true
 }

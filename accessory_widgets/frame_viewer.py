@@ -1,8 +1,11 @@
+import string
 from PyQt5 import QtWidgets, QtCore
 from ui.frameViewer import Ui_frameViewer
 from communication.can_bus import CanBus
 import can
 import threading
+
+from utils import log_warning
 
 class FrameViewer(QtWidgets.QWidget):
     """ Widget that displays can message data in a table """
@@ -58,9 +61,13 @@ class FrameViewer(QtWidgets.QWidget):
                 decode_msg = dbc_msg.decode(msg.data)
                 data = ""
                 for idx, sig in enumerate(decode_msg):
-                    data += str(sig)+": "+"{:.3f}".format(decode_msg[sig])+" "+(dbc_msg.signals[idx].unit if dbc_msg.signals[idx].unit else "")+", "
-            except ValueError:
+                    if (type(decode_msg[sig]) == str):
+                        data += str(sig)+": "+decode_msg[sig]+" "+(dbc_msg.signals[idx].unit if dbc_msg.signals[idx].unit else "")+", "
+                    else:
+                        data += str(sig)+": "+"{:.3f}".format(decode_msg[sig])+" "+(dbc_msg.signals[idx].unit if dbc_msg.signals[idx].unit else "")+", "
+            except ValueError as e:
                 data = hex(int.from_bytes(msg.data, "little"))
+                log_warning(e)
         except KeyError:
             return
 

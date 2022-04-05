@@ -13,3 +13,7 @@ Files contained in the raspi folder need to go on the raspberry pi under /home/p
 The logger will log CAN frames as long as GPIO 26 is pulled to 3.3 V. It will create a new log file every 15 minutes while logging is enabled.
 
 The server accepts a tcp connection on port 8080 and is meant to be interfaced with via /communication/client.py.
+
+To trigger circle ci to do a build:
+git tag #.#.#
+git push origin #.#.#
