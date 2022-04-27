@@ -11,7 +11,7 @@ Type=simple
 User=ubuntu
 Environment="TERM=linux"
 #ExecStartPre=sudo ./home/ubuntu/DAQ/canup.sh
-ExecStart=/home/ubuntu/DAQ/server can0 8080
+ExecStart=/home/ubuntu/DAQ/server can0 8081
 StandardOutput=syslog
 StandardError=syslog
 Restart=always

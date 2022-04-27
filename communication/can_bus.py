@@ -47,7 +47,7 @@ class CanBus(QtCore.QThread):
         self.is_paused = True
         self.is_importing = False
 
-        self.port = 8080
+        self.port = 8081
         self.ip = default_ip
         self.is_wireless = False
 
@@ -83,34 +83,40 @@ class CanBus(QtCore.QThread):
             while(self.bus.recv(0)): 
                 i+=1
             utils.log(f"cleared {i} from buffer")
-            self.connect_sig.emit(self.connected)
             utils.log("Tcp successful")
+            self.connect_sig.emit(True)
             return
-        except OSError:
-            pass # failed to connect
+        except OSError as e:
+            utils.log(f"tcp connect error {e}")
 
         self.connected = False
         utils.log_error("Failed to connect to a bus")
         self.connect_sig.emit(self.connected)
         self.connectError()
 
-    def reconnect(self):
-        """ destroy usb connection, attempt to reconnect """
+    def disconnect_bus(self):
         self.connected = False
-        while(not self.isFinished()):
-            # wait for bus receive to finish
-            pass
+        self.connect_sig.emit(self.connected)
         if self.bus:
             self.bus.shutdown()
             if not self.is_wireless: usb.util.dispose_resources(self.bus.gs_usb.gs_usb)
             del(self.bus)
             self.bus = None
+
+    def reconnect(self):
+        """ destroy usb connection, attempt to reconnect """
+        self.connected = False
+        # while(not self.isFinished()):
+        #     # wait for bus receive to finish
+        #     pass
+        self.quit()
+        self.disconnect_bus()
         self.connect()
-        self.start()
         utils.clearDictItems(utils.signals)
         self.start_time_bus = -1
         self.start_time_cmp = 0
         self.start_date_time_str = datetime.now().strftime("%m-%d-%Y %H:%M:%S")
+        self.start()
     
     def sendFormatMsg(self, msg_name, msg_data: dict):
         """ Sends a message using a dictionary of its data """
@@ -192,7 +198,8 @@ class CanBus(QtCore.QThread):
         skips = 0
         avg_process_time = 0
 
-        while self.connected:
+        #while self.connected:
+        while self.bus and self.bus.is_connected and self.connected:
             # TODO: detect when not connected (add with catching send error)
             #       would the connected variable need to be locked?
             msg = self.bus.recv(0.25)
@@ -211,11 +218,12 @@ class CanBus(QtCore.QThread):
                 bus_load = self.total_bits / 500000.0 * 100
                 self.total_bits = 0
                 self.bus_load_sig.emit(bus_load)
-                if loop_count != 0 and loop_count-skips != 0 and utils.debug_mode: print(f"rx period (ms): {1/loop_count*1000}, skipped: {skips}, process time (ms): {avg_process_time / (loop_count-skips)*1000}")
+                # if loop_count != 0 and loop_count-skips != 0 and utils.debug_mode: print(f"rx period (ms): {1/loop_count*1000}, skipped: {skips}, process time (ms): {avg_process_time / (loop_count-skips)*1000}")
                 loop_count = 0
                 avg_process_time = 0
                 skips = 0
-        if self.bus: self.bus.shutdown()
+        #self.connect_sig.emit(self.connected and self.bus.is_connected) 
+        if (self.connected): self.connect_sig.emit(self.bus and self.bus.is_connected)
 
 
 class BusSignal(QtCore.QObject):

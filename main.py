@@ -114,8 +114,9 @@ class Main(QtWidgets.QMainWindow):
         self.ui.actionAbout.triggered.connect(lambda: webbrowser.open(
                             'http://128.46.98.238/display/EL/Data+Acquisition'))
 
-        self.can_bus.connect()
-        self.can_bus.start()
+        # self.can_bus.connect()
+        # self.can_bus.start()
+        self.can_bus.reconnect()
         self.show()
     
     def updateConnectionStatus(self, connected: bool):
@@ -312,9 +313,10 @@ class Main(QtWidgets.QMainWindow):
     def closeEvent(self, event):
         """ Called on exit of main window """
         self.can_bus.connected = False
-        while(not self.can_bus.isFinished()):
-            # wait for bus receive to finish
-            pass
+        # while(not self.can_bus.isFinished()):
+        #     # wait for bus receive to finish
+        #     pass
+        self.can_bus.disconnect_bus()
         event.accept()
 
 

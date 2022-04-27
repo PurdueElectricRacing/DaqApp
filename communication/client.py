@@ -24,7 +24,7 @@ class TCPBus(can.BusABC):
         self._is_connected = False
         self.recv_buffer = Queue()
         self.send_buffer = Queue()
-        self._shutdown_flag = Queue()
+        self._shutdown_flag = False#Queue()
 
         #open socket and wait for connection to establish.
         socket.setdefaulttimeout(3) # seconds
@@ -59,8 +59,8 @@ class TCPBus(can.BusABC):
         self.send_buffer.put(msg)
 
     def _stop_threads(self):
-        self._shutdown_flag.put(True)
-        self._conn.close() #shutdown might be faster but can be ugly and raise an exception
+        #self._shutdown_flag.put(True)
+        self._shutdown_flag = True
         self._is_connected = False
         utils.log_warning("Bus Client Shutdown")
 
@@ -71,6 +71,7 @@ class TCPBus(can.BusABC):
         #can't join threads because this might be called from that thread, so just wait...
         while self._tcp_listener.is_alive() or self._tcp_writer.is_alive():
             sleep(0.005)
+        self._conn.close() #shutdown might be faster but can be ugly and raise an exception
 
     @property
     def is_connected(self):
@@ -114,63 +115,67 @@ class TCPBus(can.BusABC):
     def _poll_socket(self):
         """background thread to check for new CAN messages on the TCP socket"""
         part_formed_message = bytearray() # TCP transfer might off part way through sending a message
-        with self._conn as conn:
-            while self._shutdown_flag.empty():
-                try:
-                    data = conn.recv(self.RECV_FRAME_SZ * 20)
-                except socket.timeout:
-                    #no data, just try again.
-                    continue
-                except OSError as e:
-                    # socket's been closed.
-                    utils.log_error(f"ERROR: connection closed (1): {e}")
-                    self._stop_threads()
-                    break                
+        #with self._conn as conn:
+        conn = self._conn
+        while not self._shutdown_flag: #self._shutdown_flag.empty():
+            try:
+                data = conn.recv(self.RECV_FRAME_SZ * 20)
+            except socket.timeout:
+                #no data, just try again.
+                continue
+            except OSError as e:
+                # socket's been closed.
+                utils.log_error(f"ERROR: connection closed (1): {e}")
+                self._stop_threads()
+                break                
 
-                if len(data):
-                    # process the 1 or more messages we just received
+            if len(data):
+                # process the 1 or more messages we just received
 
-                    if len(part_formed_message):
-                        data = part_formed_message + data #add on the previous remainder
-                    
-                    #check how many whole and incomplete messages we got through.
-                    num_incomplete_bytes = len(data) % self.RECV_FRAME_SZ
-                    num_frames = len(data) // self.RECV_FRAME_SZ
+                if len(part_formed_message):
+                    data = part_formed_message + data #add on the previous remainder
+                
+                #check how many whole and incomplete messages we got through.
+                num_incomplete_bytes = len(data) % self.RECV_FRAME_SZ
+                num_frames = len(data) // self.RECV_FRAME_SZ
 
-                    #to pre-pend next time:
-                    if num_incomplete_bytes:
-                        part_formed_message = data[-num_incomplete_bytes:]
-                    else:
-                        part_formed_message = bytearray()
-
-                    c = 0
-                    for _ in range(num_frames):
-                        self.recv_buffer.put(self._bytes_to_message(data[c:c+self.RECV_FRAME_SZ]))
-                        c += self.RECV_FRAME_SZ
+                #to pre-pend next time:
+                if num_incomplete_bytes:
+                    part_formed_message = data[-num_incomplete_bytes:]
                 else:
-                    #socket's been closed at the other end.
-                    utils.log_error(f"ERROR: connection closed (2)")
-                    self._stop_threads()
-                    break
+                    part_formed_message = bytearray()
+
+                c = 0
+                for _ in range(num_frames):
+                    self.recv_buffer.put(self._bytes_to_message(data[c:c+self.RECV_FRAME_SZ]))
+                    c += self.RECV_FRAME_SZ
+            else:
+                #socket's been closed at the other end.
+                utils.log_error(f"ERROR: connection closed (2)")
+                self._stop_threads()
+                break
+        # utils.log("Exited poll socket")
 
     def _poll_send(self):
         """background thread to send messages when they are put in the queue"""
-        with self._conn as s:
-            while self._shutdown_flag.empty():
+        #with self._conn as s:
+        s = self._conn
+        while not self._shutdown_flag: #self._shutdown_flag.empty():
+            try:
+                msg = self.send_buffer.get(timeout=0.02)
+                data = self._msg_to_bytes(msg)
+                while not self.send_buffer.empty(): #we know there's one message, might be more.
+                    data += self._msg_to_bytes(self.send_buffer.get())
                 try:
-                    msg = self.send_buffer.get(timeout=0.02)
-                    data = self._msg_to_bytes(msg)
-                    while not self.send_buffer.empty(): #we know there's one message, might be more.
-                        data += self._msg_to_bytes(self.send_buffer.get())
-                    try:
-                        s.sendall(data)
-                    except OSError as e:
-                        # socket's been closed.
-                        utils.log_error(f"ERROR: connection closed (3): {e}")
-                        self._stop_threads()
-                        break
-                except QueueEmpty:
-                    pass #NBD, just means nothing to send.
+                    s.sendall(data)
+                except OSError as e:
+                    # socket's been closed.
+                    utils.log_error(f"ERROR: connection closed (3): {e}")
+                    self._stop_threads()
+                    break
+            except QueueEmpty:
+                pass #NBD, just means nothing to send.
+        # utils.log("Exited poll send")
 
 
 
