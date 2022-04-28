@@ -84,7 +84,7 @@ class CanBus(QtCore.QThread):
                 i+=1
             utils.log(f"cleared {i} from buffer")
             utils.log("Tcp successful")
-            self.connect_sig.emit(True)
+            self.connect_sig.emit(self.connected)
             return
         except OSError as e:
             utils.log(f"tcp connect error {e}")
@@ -106,10 +106,9 @@ class CanBus(QtCore.QThread):
     def reconnect(self):
         """ destroy usb connection, attempt to reconnect """
         self.connected = False
-        # while(not self.isFinished()):
-        #     # wait for bus receive to finish
-        #     pass
-        self.quit()
+        while(not self.isFinished()):
+            # wait for bus receive to finish
+            pass
         self.disconnect_bus()
         self.connect()
         utils.clearDictItems(utils.signals)
@@ -199,7 +198,7 @@ class CanBus(QtCore.QThread):
         avg_process_time = 0
 
         #while self.connected:
-        while self.bus and self.bus.is_connected and self.connected:
+        while (not self.is_wireless or self.bus and self.bus.is_connected) and self.connected:
             # TODO: detect when not connected (add with catching send error)
             #       would the connected variable need to be locked?
             msg = self.bus.recv(0.25)
@@ -223,7 +222,7 @@ class CanBus(QtCore.QThread):
                 avg_process_time = 0
                 skips = 0
         #self.connect_sig.emit(self.connected and self.bus.is_connected) 
-        if (self.connected): self.connect_sig.emit(self.bus and self.bus.is_connected)
+        if (self.connected and self.is_wireless): self.connect_sig.emit(self.bus and self.bus.is_connected)
 
 
 class BusSignal(QtCore.QObject):
