@@ -4,7 +4,8 @@
     "dbc_path": "C:/Users/lukeo/Documents/firmware/common/daq/per_dbc.dbc",
     "can_config_path": "C:/Users/lukeo/Documents/firmware/common/daq/can_config.json",
     "can_schema_path": "C:/Users/lukeo/Documents/firmware/common/daq/can_schema.json",
-    "default_ip": "ubuntu.local",
+    "default_ip": "192.168.10.40",
+    "the wifi ip": "ubuntu.local",
     "the ubiquiti ip:":"192.168.10.40",
     "dark_mode": false,
     "debug": true

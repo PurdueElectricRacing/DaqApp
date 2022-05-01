@@ -110,6 +110,7 @@ class CanBus(QtCore.QThread):
             # wait for bus receive to finish
             pass
         self.disconnect_bus()
+        time.sleep(1.5)
         self.connect()
         utils.clearDictItems(utils.signals)
         self.start_time_bus = -1
