@@ -22,7 +22,7 @@ jobs:
           command: "python -m pip install -r requirements.txt"
       - run:
           name: "Prepare Libraries"
-          command: "python -m pip install pyinstaller"
+          command: "python -m pip install -Iv pyinstaller==4.10"
       - run:
           name: "Build"
           command: "python -m PyInstaller --onefile ./main.spec"
