@@ -270,7 +270,6 @@ class Main(QtWidgets.QMainWindow):
                 (bus, node, message, sig, (r,g,b,a))];
     PlotWidget:[(bus, node, message, sig, (r,g,b,a)),];
     """
-    
     def saveView(self):
         """ Saves the current widget display"""
         output_data = ""
