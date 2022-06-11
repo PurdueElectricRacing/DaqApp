@@ -50,6 +50,7 @@
     <addaction name="actionVariable_Editor"/>
     <addaction name="actionFrame_Viewer"/>
     <addaction name="actionLog_Exporter"/>
+    <addaction name="actionCell_Viewer"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -163,6 +164,14 @@
   <action name="actionSave_View">
    <property name="text">
     <string>Save View</string>
+   </property>
+  </action>
+  <action name="actionCell_Viewer">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Cell Viewer</string>
    </property>
   </action>
  </widget>

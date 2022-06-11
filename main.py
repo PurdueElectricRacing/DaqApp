@@ -1,5 +1,6 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
 from accessory_widgets.frame_viewer import FrameViewer
+from accessory_widgets.cell_viewer import CellViewer
 from accessory_widgets.log_export import LogExporter
 from accessory_widgets.log_import import LogImporter
 from accessory_widgets.preferences_editor import PreferencesEditor
@@ -78,6 +79,7 @@ class Main(QtWidgets.QMainWindow):
         self.ui.varEdit = VariableEditor(self.daq_protocol, self.ui.centralwidget)
         self.ui.accessoryLayout.addWidget(self.ui.varEdit)
         self.ui.frameViewer = FrameViewer(self.can_bus)
+        self.ui.cellViewer  = CellViewer(self.can_bus)
         self.ui.logExporter = LogExporter(self.can_bus)
 
         # Dashboard Layout
@@ -101,6 +103,7 @@ class Main(QtWidgets.QMainWindow):
         self.ui.actionImport_log.triggered.connect(lambda : LogImporter.importLog(self.can_bus, self))
         self.ui.actionVariable_Editor.triggered.connect(self.viewVariableEditor)
         self.ui.actionFrame_Viewer.triggered.connect(self.viewFrameViewer)
+        self.ui.actionCell_Viewer.triggered.connect(self.viewCellViewer)
         self.ui.actionLog_Exporter.triggered.connect(self.viewLogExporter)
         self.ui.actionLCD.triggered.connect(self.newLCD)
         self.ui.actionPlot.triggered.connect(self.newPlot)
@@ -151,6 +154,15 @@ class Main(QtWidgets.QMainWindow):
         else:
             self.ui.accessoryLayout.removeWidget(self.ui.frameViewer)
             self.ui.frameViewer.hide()
+
+    def viewCellViewer(self, is_visible: bool):
+        """ Hides or shows the frame viewer """
+        if is_visible:
+            self.ui.accessoryLayout.addWidget(self.ui.cellViewer)
+            self.ui.cellViewer.show()
+        else:
+            self.ui.accessoryLayout.removeWidget(self.ui.cellViewer)
+            self.ui.cellViewer.hide()
     
     def viewLogExporter(self, is_visible: bool):
         """ Hides or shows the log exporter"""

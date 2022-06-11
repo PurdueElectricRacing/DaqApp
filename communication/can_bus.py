@@ -158,6 +158,8 @@ class CanBus(QtCore.QThread):
             except ValueError:
                 if "daq" not in dbc_msg.name:
                     if utils.debug_mode: utils.log_warning(f"Failed to convert msg: {msg}")
+        if (msg.is_error_frame):
+            utils.log(msg)
 
         # bus load estimation
         msg_bit_length_max = 64 + msg.dlc * 8 + 18 
