@@ -21,8 +21,8 @@ class CellViewer(QtWidgets.QWidget):
 
         # Configure Horizontal Headers
         self.ui.msgTable.setColumnCount(8)
-        self.ui.msgTable.setHorizontalHeaderLabels(["Cell", "Module 1", 
-                         "Cell", "Module 2", "Cell", "Module 3", "Cell", "Module 4"])
+        self.ui.msgTable.setHorizontalHeaderLabels(["", "Module 1", 
+                         "", "Module 2", "", "Module 3", "", "Module 4"])
         header = self.ui.msgTable.horizontalHeader()
         header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
         header.setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeToContents)
@@ -40,13 +40,18 @@ class CellViewer(QtWidgets.QWidget):
         self.num_cells = 80
         self.num_modules = 4
 
-        self.ui.msgTable.setRowCount(int(self.num_cells / self.num_modules))
+        self.ui.msgTable.setRowCount(int(self.num_cells / self.num_modules) + 1)
 
         # Set cell numbers
         for cell in range(self.num_cells):
-            self.ui.msgTable.setItem(cell % (self.num_cells / self.num_modules), 
+            self.ui.msgTable.setItem(cell % (self.num_cells / self.num_modules) + 1, 
                                      math.floor(cell / (self.num_cells / self.num_modules)) * 2, 
                                      QtWidgets.QTableWidgetItem(str(cell + 1)))
+        # Set temp labels
+        self.ui.msgTable.setItem(0, 0, QtWidgets.QTableWidgetItem('Avg Tmp'))
+        self.ui.msgTable.setItem(0, 2, QtWidgets.QTableWidgetItem('Avg Tmp'))
+        self.ui.msgTable.setItem(0, 4, QtWidgets.QTableWidgetItem('Avg Tmp'))
+        self.ui.msgTable.setItem(0, 6, QtWidgets.QTableWidgetItem('Avg Tmp'))
 
         self.cell_volts = np.zeros(self.num_cells)
 
@@ -62,6 +67,12 @@ class CellViewer(QtWidgets.QWidget):
             self.cell2 = utils.signals['Main']['Precharge']['cell_info']['v2']
             self.cell3 = utils.signals['Main']['Precharge']['cell_info']['v3']
             self.cell3.connect(self.messageReceived)
+            self.totalV = utils.signals['Main']['Precharge']['battery_info']['voltage']
+            self.maxT = utils.signals['Main']['Precharge']['max_cell_temp']['max_temp']
+            self.cell1T = utils.signals['Main']['Precharge']['mod_cell_temp_avg']['temp_A']
+            self.cell2T = utils.signals['Main']['Precharge']['mod_cell_temp_avg']['temp_B']
+            self.cell3T = utils.signals['Main']['Precharge']['mod_cell_temp_avg']['temp_C']
+            self.cell4T = utils.signals['Main']['Precharge']['mod_cell_temp_avg']['temp_D']
             self.sigs_exist = True
         except:
             utils.log_error("Cell info message not detected, cell viewer will be disabled.")
@@ -82,14 +93,23 @@ class CellViewer(QtWidgets.QWidget):
         if (self.sigs_exist):
             with self.data_lock:
                 for cell in range(self.num_cells):
-                    self.ui.msgTable.setItem(cell % (self.num_cells / self.num_modules), 
+                    self.ui.msgTable.setItem(cell % (self.num_cells / self.num_modules) + 1, 
                                             math.floor(cell / (self.num_cells / self.num_modules)) * 2 + 1, 
                                             QtWidgets.QTableWidgetItem(str(self.cell_volts[cell])))
                     self.ui.avgV.setText(str(np.mean(self.cell_volts)))
                     self.ui.maxV.setText(str(np.max(self.cell_volts)))
                     self.ui.minV.setText(str(np.min(self.cell_volts)))
+            self.ui.msgTable.setItem(0, 1, QtWidgets.QTableWidgetItem(str(self.cell1T.curr_val)))
+            self.ui.msgTable.setItem(0, 3, QtWidgets.QTableWidgetItem(str(self.cell2T.curr_val)))
+            self.ui.msgTable.setItem(0, 5, QtWidgets.QTableWidgetItem(str(self.cell3T.curr_val)))
+            self.ui.msgTable.setItem(0, 7, QtWidgets.QTableWidgetItem(str(self.cell4T.curr_val)))
+            self.ui.totalV.setText(str(self.totalV.curr_val))
+            self.ui.maxT.setText(str(self.maxT.curr_val))
+
+
+                
         else:
             for cell in range(self.num_cells):
-                self.ui.msgTable.setItem(cell % (self.num_cells / self.num_modules), 
+                self.ui.msgTable.setItem(cell % (self.num_cells / self.num_modules) + 1, 
                                         math.floor(cell / (self.num_cells / self.num_modules)) * 2 + 1, 
                                         QtWidgets.QTableWidgetItem('Error'))
