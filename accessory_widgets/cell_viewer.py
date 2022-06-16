@@ -55,7 +55,7 @@ class CellViewer(QtWidgets.QWidget):
 
         self.cell_volts = np.zeros(self.num_cells)
 
-        self.fps = 15
+        self.fps = 10
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.updateRows)
         self.timer.start(int(1000.0/self.fps))
@@ -83,9 +83,9 @@ class CellViewer(QtWidgets.QWidget):
         if self.sigs_exist:
             idx = self.mux_sig.curr_val    
             with self.data_lock:
-                self.cell_volts[idx]     = self.cell1.curr_val
-                self.cell_volts[idx + 1] = self.cell2.curr_val
-                self.cell_volts[idx + 2] = self.cell3.curr_val
+                self.cell_volts[idx]     = self.cell1.curr_val / 10000
+                self.cell_volts[idx + 1] = self.cell2.curr_val / 10000
+                self.cell_volts[idx + 2] = self.cell3.curr_val / 10000
 
 
     def updateRows(self):
@@ -93,10 +93,10 @@ class CellViewer(QtWidgets.QWidget):
         if (self.sigs_exist):
             with self.data_lock:
                 for cell in range(self.num_cells):
-                    self.ui.msgTable.setItem(cell % (self.num_cells / self.num_modules) + 1, 
+                    self.ui.msgTable.setItem((cell % (self.num_cells / self.num_modules)) + 1, 
                                             math.floor(cell / (self.num_cells / self.num_modules)) * 2 + 1, 
                                             QtWidgets.QTableWidgetItem(str(self.cell_volts[cell])))
-                    self.ui.avgV.setText(str(np.mean(self.cell_volts)))
+                    self.ui.avgV.setText(str(round(np.mean(self.cell_volts), 2)))
                     self.ui.maxV.setText(str(np.max(self.cell_volts)))
                     self.ui.minV.setText(str(np.min(self.cell_volts)))
             self.ui.msgTable.setItem(0, 1, QtWidgets.QTableWidgetItem(str(self.cell1T.curr_val)))
