@@ -162,7 +162,7 @@ class TCPBus(can.BusABC):
         s = self._conn
         while not self._shutdown_flag: #self._shutdown_flag.empty():
             try:
-                msg = self.send_buffer.get(timeout=0.02)
+                msg = self.send_buffer.get(timeout=0.002)
                 data = self._msg_to_bytes(msg)
                 while not self.send_buffer.empty(): #we know there's one message, might be more.
                     data += self._msg_to_bytes(self.send_buffer.get())

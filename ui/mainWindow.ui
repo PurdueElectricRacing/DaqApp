@@ -34,7 +34,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>26</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuHelp">
@@ -51,6 +51,7 @@
     <addaction name="actionFrame_Viewer"/>
     <addaction name="actionLog_Exporter"/>
     <addaction name="actionCell_Viewer"/>
+    <addaction name="actionBootloader"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -93,7 +94,7 @@
     <bool>true</bool>
    </property>
    <property name="checked">
-    <bool>true</bool>
+    <bool>false</bool>
    </property>
    <property name="text">
     <string>Variable Editor</string>
@@ -104,7 +105,7 @@
     <bool>true</bool>
    </property>
    <property name="checked">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="text">
     <string>Frame Viewer</string>
@@ -172,6 +173,14 @@
    </property>
    <property name="text">
     <string>Cell Viewer</string>
+   </property>
+  </action>
+  <action name="actionBootloader">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Bootloader</string>
    </property>
   </action>
  </widget>

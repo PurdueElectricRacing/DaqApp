@@ -1,4 +1,5 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
+from accessory_widgets.bootloader.bootloader import Bootloader
 from accessory_widgets.frame_viewer import FrameViewer
 from accessory_widgets.cell_viewer import CellViewer
 from accessory_widgets.log_export import LogExporter
@@ -76,11 +77,12 @@ class Main(QtWidgets.QMainWindow):
         self.ui.accessoryLayoutWidget = QtWidgets.QWidget()
         self.ui.accessoryLayoutWidget.setLayout(self.ui.accessoryLayout)
 
-        self.ui.varEdit = VariableEditor(self.daq_protocol, self.ui.centralwidget)
-        self.ui.accessoryLayout.addWidget(self.ui.varEdit)
-        self.ui.frameViewer = FrameViewer(self.can_bus)
+        self.ui.varEdit = VariableEditor(self.daq_protocol)
+        self.ui.frameViewer = FrameViewer(self.can_bus, self.ui.centralwidget)
+        self.ui.accessoryLayout.addWidget(self.ui.frameViewer)
         self.ui.cellViewer  = CellViewer(self.can_bus)
         self.ui.logExporter = LogExporter(self.can_bus)
+        self.ui.bootloader  = Bootloader(self.can_bus, config['firmware_path'])
 
         # Dashboard Layout
         self.ui.dashboardLayout = QtWidgets.QGridLayout()
@@ -105,6 +107,7 @@ class Main(QtWidgets.QMainWindow):
         self.ui.actionFrame_Viewer.triggered.connect(self.viewFrameViewer)
         self.ui.actionCell_Viewer.triggered.connect(self.viewCellViewer)
         self.ui.actionLog_Exporter.triggered.connect(self.viewLogExporter)
+        self.ui.actionBootloader.triggered.connect(self.viewBootloader)
         self.ui.actionLCD.triggered.connect(self.newLCD)
         self.ui.actionPlot.triggered.connect(self.newPlot)
         self.ui.actionRemoveWidget.triggered.connect(self.removeDisplayWidget)
@@ -165,13 +168,22 @@ class Main(QtWidgets.QMainWindow):
             self.ui.cellViewer.hide()
     
     def viewLogExporter(self, is_visible: bool):
-        """ Hides or shows the log exporter"""
+        """ Hides or shows the log exporter """
         if is_visible:
             self.ui.accessoryLayout.addWidget(self.ui.logExporter)
             self.ui.logExporter.show()
         else:
             self.ui.accessoryLayout.removeWidget(self.ui.logExporter)
             self.ui.logExporter.hide()
+    
+    def viewBootloader(self, is_visible: bool):
+        """ Hides or shows the bootloader """
+        if is_visible:
+            self.ui.accessoryLayout.addWidget(self.ui.bootloader)
+            self.ui.bootloader.show()
+        else:
+            self.ui.accessoryLayout.removeWidget(self.ui.bootloader)
+            self.ui.bootloader.hide()
 
     def newLCD(self):
         """ Adds a new LCD dashboard widget """

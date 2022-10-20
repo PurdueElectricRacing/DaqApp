@@ -1,4 +1,5 @@
 {
+    "firmware_path": "C:/Users/lukeo/Documents/firmware",
     "daq_config_path": "C:/Users/lukeo/Documents/firmware/common/daq/daq_config.json",
     "daq_schema_path": "C:/Users/lukeo/Documents/firmware/common/daq/daq_schema.json",
     "dbc_path": "C:/Users/lukeo/Documents/firmware/common/daq/per_dbc.dbc",
