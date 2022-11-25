@@ -103,7 +103,7 @@ class CellViewer(QtWidgets.QWidget):
             self.ui.msgTable.setItem(0, 3, QtWidgets.QTableWidgetItem(str(self.cell2T.curr_val)))
             self.ui.msgTable.setItem(0, 5, QtWidgets.QTableWidgetItem(str(self.cell3T.curr_val)))
             self.ui.msgTable.setItem(0, 7, QtWidgets.QTableWidgetItem(str(self.cell4T.curr_val)))
-            self.ui.totalV.setText(str(self.totalV.curr_val))
+            self.ui.totalV.setText(str(round(np.sum(self.cell_volts),2)))#self.totalV.curr_val))
             self.ui.maxT.setText(str(self.maxT.curr_val))
 
 

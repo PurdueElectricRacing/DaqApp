@@ -106,10 +106,10 @@ class PlotWidget(WidgetDisplay):
                 with signal.data_lock:
                     self.curves[idx].setData(signal.times[:signal.length], signal.data[:signal.length], pen=signal.color)
             # Logging
-            self.count += 1
-            if (self.count % 20 == 0):
-                self.count = 0
-                utils.log(f"delta: {self.current_signals[0].signal_name}: {time.perf_counter() - st}")
+            # self.count += 1
+            # if (self.count % 20 == 0):
+            #     self.count = 0
+            #     utils.log(f"delta: {self.current_signals[0].signal_name}: {time.perf_counter() - st}")
     
     def updateViews(self):
         """ Updates other view boxes if main view box is moved """

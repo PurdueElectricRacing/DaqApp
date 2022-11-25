@@ -23,6 +23,7 @@ class CanBus(QtCore.QThread):
     connect_sig = QtCore.pyqtSignal(bool)
     bus_load_sig = QtCore.pyqtSignal(float)
     new_msg_sig = QtCore.pyqtSignal(can.Message)
+    bl_msg_sig = QtCore.pyqtSignal(can.Message)
 
     def __init__(self, dbc_path, default_ip, can_config: dict):
         super(CanBus, self).__init__()
@@ -62,7 +63,7 @@ class CanBus(QtCore.QThread):
             bus_num = dev.bus
             addr = dev.address
             del(dev)
-            self.bus = can.Bus(bustype="gs_usb", channel=channel, bus=bus_num, address=addr, bitrate=500000)
+            self.bus = can.ThreadSafeBus(bustype="gs_usb", channel=channel, bus=bus_num, address=addr, bitrate=500000)
             # Empty buffer of old messages
             while(self.bus.recv(0)): pass
             self.connected = True
@@ -143,6 +144,7 @@ class CanBus(QtCore.QThread):
             utils.log_warning("Out of order")
         msg.timestamp -= self.start_time_bus
         self.new_msg_sig.emit(msg) # TODO: only emit signal if DAQ msg for daq_protocol, currently receives all msgs (low priority performance improvement)
+        if (msg.arbitration_id & 0x3F == 60): self.bl_msg_sig.emit(msg) # emit for bootloader
         if (not self.is_paused or self.is_importing) and not msg.is_error_frame:
             dbc_msg = None
             try:
