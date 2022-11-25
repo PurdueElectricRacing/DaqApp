@@ -43,6 +43,13 @@ class BootloaderCommand():
         "BLSTAT_UNKNOWN_CMD": 8  # Incorrect CAN command message format
     }
 
+    BL_ERROR = {
+        0 : "BLERROR_CRC_FAIL",
+        1 : "BLERROR_LOCKED",
+        2 : "BLERROR_LOW_ADDR",
+        3 : "BLERROR_ADDR_BOUND"
+    }
+
     ADDRESS_START = 0x08002000
     
     def __init__(self, application_name, can_db) -> None:

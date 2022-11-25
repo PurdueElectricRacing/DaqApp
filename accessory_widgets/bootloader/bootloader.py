@@ -27,7 +27,7 @@ class Bootloader(QtWidgets.QWidget):
     FLASH_STATE = {
         "WAIT_FOR_BL_MODE": 0,
         "WAIT_FOR_META_RESP": 1,
-        "WAIT_FOR_RX_WORD": 2,
+        "STREAMING_DATA": 2,
         "WAIT_FOR_STATUS": 3
     }
 
@@ -53,9 +53,12 @@ class Bootloader(QtWidgets.QWidget):
         self.crc = 0xFFFFFFFF
         self.curr_addr = 0x00
         self.flash_state = self.FLASH_STATE['WAIT_FOR_BL_MODE']
-        self.flash_timer = QtCore.QTimer()
-        self.flash_timer.timeout.connect(self.flashTimeout)
+        self.flash_timeout_timer = QtCore.QTimer()
+        self.flash_timeout_timer.timeout.connect(self.flashTimeout)
         self.flash_start_time = 0
+
+        self.flash_update_timer = QtCore.QTimer()
+        self.flash_update_timer.timeout.connect(self.flashTxUpdate)
 
         self.ui.indicators = []
         self.firmware_path = firmware_path
@@ -112,6 +115,7 @@ class Bootloader(QtWidgets.QWidget):
                 return
             self.total_bytes = self.segments[0][1] - self.segments[0][0]
             self.total_double_words = math.ceil(self.total_bytes / 8)
+            print(self.total_double_words)
 
         else:
             self.ui.currFileLbl.setText("Please select file")
@@ -138,7 +142,7 @@ class Bootloader(QtWidgets.QWidget):
         self.crc = 0xFFFFFFFF
         self._logInfo(f"Flashing {self.selected_node}")
         self.ui.progressBar.setValue(5)
-        self.flash_timer.start(2000)
+        self.flash_timeout_timer.start(3000)
         self.flash_start_time = time.time()
 
     def addStatusIndicator(self, name):
@@ -168,55 +172,76 @@ class Bootloader(QtWidgets.QWidget):
     
     def flashRxUpdate(self, cmd, data):
         """ Only called if message is from current node, and flash is active """
+        if (cmd == self.bl.RX_CMD['BLSTAT_INVALID']):
+            self._logInfo(f"BL Error: {self.bl.BL_ERROR[data]}")
+            self.flashReset(0)
+            return
         if (self.flash_state == self.FLASH_STATE['WAIT_FOR_BL_MODE']):
             if (cmd == self.bl.RX_CMD['BLSTAT_WAIT']):
-                self.flash_timer.stop() # Entered bl mode, stop timeout timer
-                self.flash_timer.start(2000) # Time the rest of the flash process
+                self.flash_timeout_timer.stop() # Entered bl mode, stop timeout timer
                 self._logInfo("Sending firmware image metadata ...")
                 msg = self.bl.firmware_size_msg(self.total_double_words * 2) # words
                 self.bus.sendMsg(msg)
                 self.flash_state = self.FLASH_STATE['WAIT_FOR_META_RESP']
+                self.flash_timeout_timer.start(2000) # Time the rest of the flash process
         elif (self.flash_state == self.FLASH_STATE['WAIT_FOR_META_RESP']):
             if (cmd == self.bl.RX_CMD['BLSTAT_METDATA_RX']):
-                self.flash_timer.start(2000)
+                self.flash_timeout_timer.stop()
                 self._logInfo(f"Sending {self.hex_loc}...")
                 self._logInfo(f"Total File Size: {self.total_bytes} Bytes")
+                self.flash_timeout_timer.start(2000)
                 self.curr_addr = self.segments[0][0]
-                self.sendSegmentDoubleWord(self.curr_addr)
-                self.flash_state = self.FLASH_STATE['WAIT_FOR_RX_WORD']
-        elif (self.flash_state == self.FLASH_STATE['WAIT_FOR_RX_WORD']):
+                self.flash_state = self.FLASH_STATE['STREAMING_DATA']
+                self.flash_update_timer.start(1)
+        elif (self.flash_state == self.FLASH_STATE['STREAMING_DATA']):
             if (cmd == self.bl.RX_CMD['BLSTAT_PROGRESS']):
-                if (data == self.curr_addr + 8):
-                    self.flash_timer.start(2000)
-                    self.curr_addr += 8
-                    if (self.curr_addr < self.segments[0][1]):
-                        # Not at end, send either 10 more or up to segments
-                        addr = self.curr_addr
-                        while addr - self.curr_addr < 1 * 8 and addr < self.segments[0][1]:
-                            self.sendSegmentDoubleWord(addr)
-                            addr += 8
-                        self.curr_addr = addr - 8 # the above while loop is guaranteed to run at least once
-                        self.ui.progressBar.setValue((90 * (self.curr_addr - self.segments[0][0])) / self.total_bytes + 5)
-                    else:
-                        self._logInfo("Sending CRC checksum")
-                        can_tx = self.bl.firmware_crc_msg(self.crc & 0xFFFFFFFF)
-                        self.bus.sendMsg(can_tx)
-                        self.flash_state = self.FLASH_STATE['WAIT_FOR_STATUS']
-                elif (data < self.curr_addr + 8):
-                    pass
+                self.flash_timeout_timer.stop()
+                self.flash_timeout_timer.start(2000) # reset timer
+                #     self.curr_addr += 8
+                #     if (self.curr_addr < self.segments[0][1]):
+                #         # Not at end, send either 10 more or up to segments
+                #         addr = self.curr_addr
+                #         while addr - self.curr_addr < 1 * 8 and addr < self.segments[0][1]:
+                #             self.sendSegmentDoubleWord(addr)
+                #             addr += 8
+                #         self.curr_addr = addr - 8 # the above while loop is guaranteed to run at least once
+                #         self.ui.progressBar.setValue((90 * (self.curr_addr - self.segments[0][0])) / self.total_bytes + 5)
+                #     else:
+                #         self._logInfo("Sending CRC checksum")
+                #         can_tx = self.bl.firmware_crc_msg(self.crc & 0xFFFFFFFF)
+                #         self.bus.sendMsg(can_tx)
+                #         self.flash_state = self.FLASH_STATE['WAIT_FOR_STATUS']
+                # elif (data < self.curr_addr + 8):
+                #     pass
+                # else:
+                #     self._logInfo(f"{cmd}|{data} != {self.curr_addr + 4}")
+                #     self._logInfo("ERROR: Firmware download failed!!")
+                #     self.flashReset(0)
+        elif (self.flash_state == self.FLASH_STATE['WAIT_FOR_STATUS']):
+            if (cmd != self.bl.RX_CMD['BLSTAT_PROGRESS']):
+                self.flash_timeout_timer.stop()
+                self.flash_update_timer.stop()
+                if (cmd == self.bl.RX_CMD['BLSTAT_DONE']):
+                    self._logInfo("Firmware download successful, CRC matched")
+                    self.flashReset(100)
                 else:
-                    self._logInfo(f"{cmd}|{data} != {self.curr_addr + 4}")
                     self._logInfo("ERROR: Firmware download failed!!")
                     self.flashReset(0)
-        elif (self.flash_state == self.FLASH_STATE['WAIT_FOR_STATUS']):
-            self.flash_timer.stop()
-            if (cmd == self.bl.RX_CMD['BLSTAT_DONE']):
-                self._logInfo("Firmware download successful, CRC matched")
-                self.flashReset(100)
+                self._logInfo("Total time: %.2f seconds" % (time.time() - self.flash_start_time))
+    
+    def flashTxUpdate(self):
+        if (self.flash_active and self.flash_state == self.FLASH_STATE['STREAMING_DATA']):
+            if (self.curr_addr < self.segments[0][1]):
+                self.sendSegmentDoubleWord(self.curr_addr)
+                self.curr_addr += 8
+                self.ui.progressBar.setValue((90 * (self.curr_addr - self.segments[0][0])) / self.total_bytes + 5)
             else:
-                self._logInfo("ERROR: Firmware download failed!!")
-                self.flashReset(0)
-            self._logInfo("Total time: %.2f seconds" % (time.time() - self.flash_start_time))
+                self._logInfo("Sending CRC checksum")
+                can_tx = self.bl.firmware_crc_msg(self.crc & 0xFFFFFFFF)
+                self.bus.sendMsg(can_tx)
+                self.flash_state = self.FLASH_STATE['WAIT_FOR_STATUS']
+        else:
+            self.flash_update_timer.stop() # triggered unexpectedly
     
     def sendSegmentDoubleWord(self, addr):
         """ Only call if flash in progress """
@@ -242,9 +267,13 @@ class Bootloader(QtWidgets.QWidget):
             else:
                 self._logInfo("ERROR: Timed out during flash")
                 self.flashReset(0)
+        else:
+            self.flash_timeout_timer.stop() # triggered unexpectedly
 
     def flashReset(self, prog):
         self.flash_active = False
+        self.flash_timeout_timer.stop()
+        self.flash_update_timer.stop()
         self.flash_state = self.FLASH_STATE['WAIT_FOR_BL_MODE']
         self.ui.progressBar.setValue(prog)
         self.ui.flashBtn.setDisabled(False)
