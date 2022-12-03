@@ -45,7 +45,6 @@ class CanBus(QtCore.QThread):
         self.can_config = can_config
         self.updateSignals(self.can_config)
 
-        self.is_paused = True
         self.is_importing = False
 
         self.port = 8081
@@ -145,13 +144,13 @@ class CanBus(QtCore.QThread):
         msg.timestamp -= self.start_time_bus
         self.new_msg_sig.emit(msg) # TODO: only emit signal if DAQ msg for daq_protocol, currently receives all msgs (low priority performance improvement)
         if (msg.arbitration_id & 0x3F == 60): self.bl_msg_sig.emit(msg) # emit for bootloader
-        if (not self.is_paused or self.is_importing) and not msg.is_error_frame:
+        if not msg.is_error_frame:
             dbc_msg = None
             try:
                 dbc_msg = self.db.get_message_by_frame_id(msg.arbitration_id)
                 decode = dbc_msg.decode(msg.data)
                 for sig in decode.keys():
-                    utils.signals[utils.b_str][dbc_msg.senders[0]][dbc_msg.name][sig].update(decode[sig], msg.timestamp)
+                    utils.signals[utils.b_str][dbc_msg.senders[0]][dbc_msg.name][sig].update(decode[sig], msg.timestamp, not utils.logging_paused or self.is_importing)
             except KeyError:
                 if dbc_msg and "daq" not in dbc_msg.name:
                     if utils.debug_mode: utils.log_warning(f"Unrecognized signal key for {msg}")
@@ -169,7 +168,7 @@ class CanBus(QtCore.QThread):
 
     def pause(self, pause: bool):
         """ pauses the recording of signal values, passes through read requests """
-        self.is_paused = pause
+        utils.logging_paused = pause
 
     def connectError(self):
         """ Creates message box prompting to try to reconnect """
@@ -190,10 +189,7 @@ class CanBus(QtCore.QThread):
                     for signal in msg['signals']:
                         utils.signals[bus['bus_name']][node['node_name']] \
                                     [msg['msg_name']][signal['sig_name']]\
-                                    = BusSignal(bus['bus_name'], node['node_name'],
-                                                msg['msg_name'], signal['sig_name'], 
-                                                (signal['unit'] if 'unit' in signal else ""),
-                                                utils.data_types[signal['type']])
+                                    = BusSignal.fromCANMsg(signal, msg, node, bus)
 
     def run(self):
         """ Thread loop to receive can messages """
@@ -237,19 +233,41 @@ class BusSignal(QtCore.QObject):
     history = 240000 # for 0.015s update period 1 hour of data
     data_lock = threading.Lock()
 
-    def __init__(self, bus_name, node_name, message_name, signal_name, unit, d_type):
+    def __init__(self, bus_name, node_name, msg_name, sig_name, dtype, store_dtype=None, unit="", msg_desc="", sig_desc="", msg_period=0):
         super(BusSignal, self).__init__()
         self.bus_name = bus_name
         self.node_name = node_name
-        self.message_name = message_name
-        self.signal_name = signal_name
+        self.message_name = msg_name
+        self.signal_name = sig_name
+
         self.unit = unit
-        self.next_idx = 0
-        self.data  = np.zeros(self.history, dtype=d_type)
+        self.msg_desc = msg_desc
+        self.sig_desc = sig_desc
+        self.msg_period = msg_period
+        self.send_dtype = dtype
+        if not store_dtype: self.store_dtype = self.send_dtype
+        else: self.store_dtype = store_dtype
+        self.curr_idx = 0
+        self.data  = np.zeros(self.history, dtype=self.store_dtype)
         self.times = np.zeros(self.history, dtype=np.float)
         self.color = QtGui.QColor(255, 255, 255)
+        self.stale_timestamp = time.time()
         if not utils.dark_mode:
             self.color = QtGui.QColor(0,0,0)
+
+    def fromCANMsg(sig, msg, node, bus):
+        send_dtype = utils.data_types[sig['type']]
+        # If there is scaling going on, don't store as an integer on accident
+        if ('scale' in sig and sig['scale'] != 1) or ('offset' in sig and sig['offset'] != 0):
+            parse_dtype = utils.data_types['float']
+        else:
+            parse_dtype = send_dtype
+        return BusSignal(bus['bus_name'], node['node_name'], msg['msg_name'], sig['sig_name'],
+                         send_dtype, store_dtype=parse_dtype,
+                         unit=(sig['unit'] if 'unit' in sig else ""),
+                         msg_desc=(msg['msg_desc'] if 'msg_desc' in msg else ""),
+                         sig_desc=(sig['sig_desc'] if 'sig_desc' in sig else ""),
+                         msg_period=msg['msg_period'])
 
     def connect(self, func: 'function'):
         """ call func each time signal updated """
@@ -259,21 +277,22 @@ class BusSignal(QtCore.QObject):
         """ stop calling func on signal update """
         self.update_sig.disconnect(func)
 
-    def update(self, val, timestamp):
+    def update(self, val, timestamp, record):
         """ update the value of the signal """
-        if self.next_idx >= self.history:
+        if record: self.curr_idx += 1
+        if self.curr_idx >= self.history:
             utils.log_warning(f"{self.signal_name} out of space, resetting!")
             self.clear()
         with self.data_lock:
-            self.data[self.next_idx] = val
-            self.times[self.next_idx] = timestamp
-            self.next_idx += 1
+            self.data[self.curr_idx] = val
+            self.times[self.curr_idx] = timestamp
+            self.stale_timestamp = time.time()
         self.update_sig.emit()
 
     def clear(self):
         """ clears stored signal values """
         with self.data_lock:
-            self.next_idx = 0
+            self.curr_idx = 0
             self.data.fill(0)
             self.times.fill(0)
 
@@ -281,15 +300,22 @@ class BusSignal(QtCore.QObject):
     def curr_val(self):
         """ last value recorded """
         with self.data_lock:
-            return self.data[self.next_idx - 1]
+            return self.data[self.curr_idx]
 
     @property
     def last_update_time(self):
         """ timestamp of last value recorded """
         with self.data_lock:
-            return self.times[self.next_idx - 1]
+            return self.times[self.curr_idx]
     
     @property
     def length(self):
         """ number of recorded values """
-        return self.next_idx
+        return self.curr_idx
+
+    @property
+    def is_stale(self):
+        """ based on last receive time """
+        if self.msg_period == 0: return False
+        else:
+            return ((time.time() - self.stale_timestamp) * 1000) > self.msg_period * 1.5

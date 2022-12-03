@@ -67,7 +67,8 @@ class FrameViewer(QtWidgets.QWidget):
                         data += str(sig)+": "+"{:.3f}".format(decode_msg[sig])+" "+(dbc_msg.signals[idx].unit if dbc_msg.signals[idx].unit else "")+", "
             except ValueError as e:
                 data = hex(int.from_bytes(msg.data, "little"))
-                log_warning(e)
+                if "daq" not in dbc_msg.name:
+                    log_warning(e)
         except KeyError:
             return
 

@@ -13,7 +13,7 @@ def initGlobals():
     global events
     events = []
     global b_str
-    b_str = "Main"
+    b_str = "Test" # TODO: change!
     global data_types
     data_types = {
         'uint8_t':np.dtype('<u1'),
@@ -26,10 +26,18 @@ def initGlobals():
         'int64_t':np.dtype('<i8'),
         'float':np.dtype('<f4') # 32 bit
     }
+    global data_type_length
+    data_type_length = {'uint8_t':8, 'uint16_t':16, 'uint32_t':32, 'uint64_t':64,
+                    'int8_t':8, 'int16_t':16, 'int32_t':32, 'int64_t':64,
+                    'float':32}
     global debug_mode
     debug_mode = False
     global dark_mode
     dark_mode = False
+    global daqProt
+    daqProt = None
+    global logging_paused
+    logging_paused = True
 
 # Logging helper functions
 class bcolors:

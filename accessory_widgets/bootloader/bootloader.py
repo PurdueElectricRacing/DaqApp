@@ -79,6 +79,8 @@ class Bootloader(QtWidgets.QWidget):
         # Determine which nodes are bootloader enabled
         self.bl_nodes = []
         self.ui.nodeSelector.clear()
+        if 'bootloader' not in utils.signals[utils.b_str]: # Not a bootloader enabled bus
+            return
         for msg in utils.signals[utils.b_str]['bootloader']:
             self.bl_nodes.append(msg[:-len(self.bl_msg_ending)])
         self.ui.nodeSelector.addItems(self.bl_nodes)

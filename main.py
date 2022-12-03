@@ -2,10 +2,12 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from accessory_widgets.bootloader.bootloader import Bootloader
 from accessory_widgets.frame_viewer import FrameViewer
 from accessory_widgets.cell_viewer import CellViewer
+from accessory_widgets.charge_viewer import ChargeViewer
 from accessory_widgets.log_export import LogExporter
 from accessory_widgets.log_import import LogImporter
 from accessory_widgets.preferences_editor import PreferencesEditor
 from accessory_widgets.variable_editor import VariableEditor
+from accessory_widgets.file_viewer import FileViewer
 from display_widgets.plot_widget import PlotWidget
 from display_widgets import plot_widget
 from communication.can_bus import CanBus
@@ -78,11 +80,13 @@ class Main(QtWidgets.QMainWindow):
         self.ui.accessoryLayoutWidget.setLayout(self.ui.accessoryLayout)
 
         self.ui.varEdit = VariableEditor(self.daq_protocol)
+        self.ui.fileViewer = FileViewer()
         self.ui.frameViewer = FrameViewer(self.can_bus, self.ui.centralwidget)
         self.ui.accessoryLayout.addWidget(self.ui.frameViewer)
         self.ui.cellViewer  = CellViewer(self.can_bus)
         self.ui.logExporter = LogExporter(self.can_bus)
         self.ui.bootloader  = Bootloader(self.can_bus, config['firmware_path'])
+        self.ui.chargeViewer  = ChargeViewer(self.can_bus)
 
         # Dashboard Layout
         self.ui.dashboardLayout = QtWidgets.QGridLayout()
@@ -104,10 +108,12 @@ class Main(QtWidgets.QMainWindow):
         # Menu Action Connections
         self.ui.actionImport_log.triggered.connect(lambda : LogImporter.importLog(self.can_bus, self))
         self.ui.actionVariable_Editor.triggered.connect(self.viewVariableEditor)
+        self.ui.actionFile_Viewer.triggered.connect(self.viewFileViewer)
         self.ui.actionFrame_Viewer.triggered.connect(self.viewFrameViewer)
         self.ui.actionCell_Viewer.triggered.connect(self.viewCellViewer)
         self.ui.actionLog_Exporter.triggered.connect(self.viewLogExporter)
         self.ui.actionBootloader.triggered.connect(self.viewBootloader)
+        self.ui.actionCharge_Viewer.triggered.connect(self.viewChargeViewer)
         self.ui.actionLCD.triggered.connect(self.newLCD)
         self.ui.actionPlot.triggered.connect(self.newPlot)
         self.ui.actionRemoveWidget.triggered.connect(self.removeDisplayWidget)
@@ -148,6 +154,16 @@ class Main(QtWidgets.QMainWindow):
         else:
             self.ui.varEdit.hide()
             self.ui.accessoryLayout.removeWidget(self.ui.varEdit)
+
+    def viewFileViewer(self, is_visible: bool):
+        """ Hides or shows the file viewer  """
+        if is_visible:
+            self.ui.accessoryLayout.addWidget(self.ui.fileViewer)
+            self.ui.fileViewer.show()
+        else:
+            self.ui.fileViewer.hide()
+            self.ui.accessoryLayout.removeWidget(self.ui.fileViewer)
+
     
     def viewFrameViewer(self, is_visible: bool):
         """ Hides or shows the frame viewer """
@@ -184,6 +200,16 @@ class Main(QtWidgets.QMainWindow):
         else:
             self.ui.accessoryLayout.removeWidget(self.ui.bootloader)
             self.ui.bootloader.hide()
+
+    def viewChargeViewer(self, is_visible: bool):
+        """ Hides or shows the bootloader """
+        if is_visible:
+            self.ui.accessoryLayout.addWidget(self.ui.chargeViewer)
+            self.ui.chargeViewer.show()
+        else:
+            self.ui.accessoryLayout.removeWidget(self.ui.chargeViewer)
+            self.ui.chargeViewer.hide()
+
 
     def newLCD(self):
         """ Adds a new LCD dashboard widget """

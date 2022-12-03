@@ -62,8 +62,8 @@ class VariableEditor(QtWidgets.QWidget):
 
         self.ui.readButton.setDisabled(False)
         self.ui.writeButton.setDisabled(self.curr_var.read_only)
-        self.ui.saveButton.setDisabled(not self.curr_var.eeprom_enabled)
-        self.ui.loadButton.setDisabled(self.save_in_prog or not self.curr_var.eeprom_enabled or self.curr_var.read_only)
+        self.ui.saveButton.setDisabled(self.curr_var.file_lbl == None)
+        self.ui.loadButton.setDisabled(self.save_in_prog or (self.curr_var.file_lbl == None) or self.curr_var.read_only)
         self.ui.startPubButton.setDisabled(False)
         self.ui.stopPubButton.setDisabled(False)
     
@@ -88,13 +88,12 @@ class VariableEditor(QtWidgets.QWidget):
     def writeButtonClicked(self):
         """ Requests a variable write operation """
         try:
-            new_value = int(self.ui.newValDisp.text())
+            new_value = float(self.ui.newValDisp.text())
         except ValueError:
-            QtWidgets.QMessageBox.critical(self, "Write Error", "Write failed. Please enter an integer")
+            QtWidgets.QMessageBox.critical(self, "Write Error", "Write failed. Please enter an number")
             return
-        max_size = pow(2, self.curr_var.bit_length) - 1
-        if new_value > max_size:
-            self.ui.newValDisp.setText(str(new_value) + f" <- out of range (max: {max_size})")
+        if not self.curr_var.valueSendable(new_value):
+            self.ui.newValDisp.setText(str(new_value) + f" <- Invalid for send dtype: {str(self.curr_var.send_dtype)}, scale: {self.curr_var.scale}, offset: {self.curr_var.offset})")
             return
         
         # Convey that the current value displayed may be old
@@ -109,7 +108,7 @@ class VariableEditor(QtWidgets.QWidget):
     def saveButtonClicked(self):
         """ Requests a variable save operation """
         self.changes_unsaved = False
-        self.daq_protocol.saveVar(self.curr_var)
+        self.daq_protocol.saveFile(self.curr_var)
     
     def loadButtonClicked(self):
         """ Requests a variable load operation """
@@ -118,7 +117,7 @@ class VariableEditor(QtWidgets.QWidget):
         if len(prev_text) > 0 and "(previous)" not in prev_text:
             self.ui.currValDisp.setText(prev_text + " (previous)")
 
-        self.daq_protocol.loadVar(self.curr_var)
+        self.daq_protocol.loadFile(self.curr_var)
     
     def startPubButtonClicked(self):
         """ Requests a variable publish operation """
@@ -144,7 +143,7 @@ class VariableEditor(QtWidgets.QWidget):
     def handleSaveProgress(self, in_progress):
         """ Callback for displaying the status of a save operation """
         self.save_in_prog = in_progress
-        self.ui.loadButton.setDisabled(self.save_in_prog or not self.curr_var.eeprom_enabled or self.curr_var.read_only)
+        self.ui.loadButton.setDisabled(self.save_in_prog or self.curr_var.file_lbl == None or self.curr_var.read_only)
         status = "busy" if in_progress else "idle"
         if self.changes_unsaved:
             status += "\nCaution: unsaved changes."

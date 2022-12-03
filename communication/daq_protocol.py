@@ -26,18 +26,115 @@ DAQ_ID_LENGTH = 5
 DAQ_ID_MASK   = 0b11111
 
 
+"""
+TODO: parsing, import file vars as signals
+        load and save commands are now different
+        when you write to a file variable, mark the file as dirty
+"""
+
+
 class DAQVariable(BusSignal):
     """ DAQ variable that can be subscribed (connected) to for receiving updates"""
 
-    def __init__(self, bus_name, node_name, message_name, signal_name, daq_id, read_only, 
-                 bit_length, eeprom_enabled):
-        super(DAQVariable, self).__init__(bus_name, node_name, 
-                                          message_name, signal_name, "", np.dtype('<u'+str(math.ceil(bit_length/8))))
-        self.id = daq_id
+    def __init__(self, bus_name, node_name, msg_name, sig_name, id, read_only, bit_length, 
+                 dtype, store_dtype=None, unit="", msg_desc="", sig_desc="", msg_period=0, file_name=None, file_lbl=None, scale=1, offset=0):
+        super(DAQVariable, self).__init__(bus_name, node_name, msg_name, sig_name, dtype, store_dtype=store_dtype, 
+                                          unit=unit, msg_desc=msg_desc, sig_desc=sig_desc, msg_period=msg_period)
+        self.id = id
         self.read_only = read_only
         self.bit_length = bit_length
-        self.eeprom_enabled = eeprom_enabled
+        self.file = file_name
+        self.file_lbl = file_lbl
         self.pub_period_ms = 0
+
+        self.scale = scale
+        self.offset = offset
+
+        self.is_dirty = False
+
+    
+    def fromDAQVar(id, var, node, bus):
+        send_dtype = utils.data_types[var['type']]
+        # If there is scaling going on, don't store as an integer on accident
+        if ('scale' in var and var['scale'] != 1) or ('offset' in var and var['offset'] != 0):
+            parse_dtype = utils.data_types['float']
+        else:
+            parse_dtype = send_dtype
+        # Calculate bit length
+        bit_length = utils.data_type_length[var['type']]
+        if ('length' in var):
+            if ('uint' not in var['type'] or var['length'] > bit_length):
+                utils.log_error(f"Invalid bit length defined for DAQ variable {var['var_name']}")
+            bit_length = var['length']
+
+        return DAQVariable(bus['bus_name'], node['node_name'], f"daq_response_{node['node_name'].upper()}", var['var_name'],
+                         id, var['read_only'], bit_length,
+                         send_dtype, store_dtype=parse_dtype,
+                         unit=(var['unit'] if 'unit' in var else ""),
+                         sig_desc=(var['var_desc'] if 'var_desc' in var else ""), 
+                         scale=(var['scale'] if 'scale' in var else 1),
+                         offset=(var['offset'] if 'offset' in var else 0))
+    
+    def fromDAQFileVar(id, var, file_name, file_lbl, node, bus):
+        send_dtype = utils.data_types[var['type']]
+        # If there is scaling going on, don't store as an integer on accident
+        if ('scale' in var and var['scale'] != 1) or ('offset' in var and var['offset'] != 0):
+            parse_dtype = utils.data_types['float']
+        else:
+            parse_dtype = send_dtype
+        # Calculate bit length
+        bit_length = utils.data_type_length[var['type']]
+
+        return DAQVariable(bus['bus_name'], node['node_name'], f"daq_response_{node['node_name'].upper()}", var['var_name'],
+                         id, False, bit_length,
+                         send_dtype, store_dtype=parse_dtype,
+                         unit=(var['unit'] if 'unit' in var else ""),
+                         sig_desc=(var['var_desc'] if 'var_desc' in var else ""),
+                         file_name=file_name, file_lbl=file_lbl,
+                         scale=(var['scale'] if 'scale' in var else 1),
+                         offset=(var['offset'] if 'offset' in var else 0))
+
+    def update(self, bytes, timestamp, record):
+        val = np.frombuffer(bytes.to_bytes((self.bit_length + 7)//8, 'little'), dtype=self.send_dtype, count=1)
+        val = val * self.scale + self.offset
+        return super().update(val, timestamp, record)
+
+    def reverseScale(self, val):
+        return (val - self.offset) / self.scale
+
+    def valueSendable(self, val):
+        # TODO: check max and min from json config
+        val = self.reverseScale(val)
+        if 'uint' in str(self.send_dtype):
+            max_size = pow(2, self.bit_length) - 1
+            if val > max_size or val < 0:
+                return False
+        elif 'int' in str(self.send_dtype):
+            s = np.iinfo(self.send_dtype)
+            if val < s.min or val > s.max:
+                return False
+        return True
+
+    def reverseToBytes(self, val):
+        if not self.valueSendable(val): return False # Value will not fit in the given dtype
+        return (np.array([self.reverseScale(val)], dtype=self.send_dtype).tobytes())
+
+    def getSendValue(self, val):
+        if not self.valueSendable(val): return False # Value will not fit in the given dtype
+        # Convert to send
+        a = np.array([self.reverseScale(val)], dtype=self.send_dtype)[0]
+        # Convert back
+        return a * self.scale + self.offset
+
+    def isDirty(self):
+        if self.file_lbl == None: return False
+        return self.is_dirty
+
+    def updateDirty(self, dirty):
+        if self.file_lbl == None: return
+        self.is_dirty = dirty
+        
+
 
 class DaqProtocol(QtCore.QObject):
     """ Implements CAN daq protocol for modifying and live tracking of variables """
@@ -54,6 +151,7 @@ class DaqProtocol(QtCore.QObject):
         # eeprom saving (prevent a load while save taking place)
         self.last_save_request_id = 0
         self.save_in_progress = False
+        utils.daqProt = self
 
     def readVar(self, var: DAQVariable):
         """ Requests to read a variable, expects a reply """
@@ -67,40 +165,54 @@ class DaqProtocol(QtCore.QObject):
         """ Writes to a variable """
         dbc_msg = self.can_bus.db.get_message_by_name(f"daq_command_{var.node_name.upper()}")
         data = [((var.id & DAQ_ID_MASK) << DAQ_CMD_LENGTH) | DAQ_CMD_WRITE]
+        bytes = var.reverseToBytes(new_val)
         # LSB, add variable data to byte array
         for i in range(math.ceil(var.bit_length / 8)):
-            data.append((new_val >> i * 8) & 0xFF)
+            data.append(bytes[i])
+        var.updateDirty(True)
         self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id, 
                                          is_extended_id=True,
                                          data=data))
         
-    def saveVar(self, var: DAQVariable):
+    def saveFile(self, var: DAQVariable):
         """ Saves variable state in eeprom, expects save complete reply """
-        if not var.eeprom_enabled:
+        if var.file_lbl == None:
             utils.log_error(f"Invalid save var operation for {var.signal_name}")
             return
         dbc_msg = self.can_bus.db.get_message_by_name(f"daq_command_{var.node_name.upper()}")
         data = [((var.id & DAQ_ID_MASK) << DAQ_CMD_LENGTH) | DAQ_CMD_SAVE]
+        lbl = var.file_lbl
+        data.append(ord(lbl[0]))
+        data.append(ord(lbl[1]))
+        data.append(ord(lbl[2]))
+        data.append(ord(lbl[3]))
         self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id, 
                                         is_extended_id=True,
                                         data=data))
-        self.save_in_progress = True
-        self.last_save_request_id = var.id
-        self.save_in_progress_sig.emit(True)
+        self.setFileClean(var)
+        # self.save_in_progress = True
+        # self.last_save_request_id = var.id
+        # self.save_in_progress_sig.emit(True)
     
-    def loadVar(self, var: DAQVariable):
+    def loadFile(self, var: DAQVariable):
         """ Loads a variable from eeprom, cannot be performed during save operation """
-        if not var.eeprom_enabled or var.read_only:
+        if var.file_lbl == None:
             utils.log_error(f"Invalid load var operation for {var.signal_name}")
             return
-        if self.save_in_progress:
-            utils.log_error(f"Cannot load var during save operation ")
-            return
+        # if self.save_in_progress:
+        #     utils.log_error(f"Cannot load var during save operation ")
+        #     return
         dbc_msg = self.can_bus.db.get_message_by_name(f"daq_command_{var.node_name.upper()}")
         data = [((var.id & DAQ_ID_MASK) << DAQ_CMD_LENGTH) | DAQ_CMD_LOAD]
+        lbl = var.file_lbl
+        data.append(ord(lbl[0]))
+        data.append(ord(lbl[1]))
+        data.append(ord(lbl[2]))
+        data.append(ord(lbl[3]))
         self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id, 
                                          is_extended_id=True,
                                          data=data))
+        self.setFileClean(var)
 
     def pubVar(self, var: DAQVariable, period_ms):
         """ Requests to start publishing a variable at a specified period """
@@ -120,6 +232,16 @@ class DaqProtocol(QtCore.QObject):
         self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id, 
                                          is_extended_id=True,
                                          data=data))
+    
+    def setFileClean(self, var_in_file: DAQVariable):
+        """ Sets all variables in a file to clean (usually after flushing) """
+        if (var_in_file.file_lbl == None): return
+        node_d = utils.signals[var_in_file.bus_name][var_in_file.node_name]
+        contents = node_d['files'][var_in_file.file]['contents']
+        vars = node_d[var_in_file.message_name]
+        for file_var in contents:
+            vars[file_var].updateDirty(False)
+
 
     def handleDaqMsg(self, msg: can.Message):
         """ Interprets and runs commands from DAQ message """
@@ -140,7 +262,7 @@ class DaqProtocol(QtCore.QObject):
                 curr_bit += DAQ_ID_LENGTH
                 var = list(utils.signals[utils.b_str][node_name][dbc_msg.name].values())[id]
                 if not (cmd == DAQ_RPLY_PUB and self.can_bus.is_paused):
-                    var.update((data >> curr_bit) & ~(0xFFFFFFFFFFFFFFFF << var.bit_length), msg.timestamp)
+                    var.update((data >> curr_bit) & ~(0xFFFFFFFFFFFFFFFF << var.bit_length), msg.timestamp, not utils.logging_paused)
                 curr_bit += var.bit_length
             elif cmd == DAQ_RPLY_SAVE:
                 id = (data >> curr_bit) & DAQ_ID_MASK
@@ -178,7 +300,19 @@ class DaqProtocol(QtCore.QObject):
                 id_counter = 0
                 for var in node['variables']:
                     # create new variable
-                    utils.signals[bus['bus_name']][node['node_name']][f"daq_response_{node['node_name'].upper()}"][var['var_name']] = DAQVariable(
-                                   bus['bus_name'], node['node_name'], f"daq_response_{node['node_name'].upper()}", var['var_name'], id_counter, 
-                                   var['read_only'], var['bit_length'], "eeprom" in var)
+                    utils.signals[bus['bus_name']][node['node_name']][f"daq_response_{node['node_name'].upper()}"][var['var_name']] = DAQVariable.fromDAQVar(
+                        id_counter, var, node, bus)
                     id_counter += 1
+                # Check file variables
+                if 'files' in node:
+                    if 'files' not in utils.signals[bus['bus_name']][node['node_name']]: utils.signals[bus['bus_name']][node['node_name']]['files'] = {}
+                    # file_name:is_dirty
+                    file_dict = utils.signals[bus['bus_name']][node['node_name']]['files']
+                    for file in node['files']:
+                        file_dict[file['name']] = {}
+                        file_dict[file['name']]['contents'] = []
+                        for var in file['contents']:
+                            file_dict[file['name']]['contents'].append(var['var_name'])
+                            utils.signals[bus['bus_name']][node['node_name']][f"daq_response_{node['node_name'].upper()}"][var['var_name']] = DAQVariable.fromDAQFileVar(
+                                id_counter, var, file['name'], file['eeprom_lbl'], node, bus)
+                            id_counter += 1

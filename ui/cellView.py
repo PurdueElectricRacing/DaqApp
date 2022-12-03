@@ -14,7 +14,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_cellViewer(object):
     def setupUi(self, cellViewer):
         cellViewer.setObjectName("cellViewer")
-        cellViewer.resize(796, 504)
+        cellViewer.resize(796, 394)
         self.verticalLayout = QtWidgets.QVBoxLayout(cellViewer)
         self.verticalLayout.setObjectName("verticalLayout")
         self.widgetTitle = QtWidgets.QLabel(cellViewer)
