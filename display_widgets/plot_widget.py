@@ -94,7 +94,7 @@ class PlotWidget(WidgetDisplay):
         """ Called each time signal value updated, update plot at fps """
         # Redraw plot at fps
         curr = time.time()
-        if curr - self.last_update_time > 1.0/self.fps:
+        if not utils.logging_paused and (curr - self.last_update_time > 1.0/self.fps):
             self.last_update_time = curr
 
             st = time.perf_counter()
