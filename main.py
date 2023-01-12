@@ -2,6 +2,7 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from accessory_widgets.bootloader.bootloader import Bootloader
 from accessory_widgets.frame_viewer import FrameViewer
 from accessory_widgets.cell_viewer import CellViewer
+from accessory_widgets.faultViewer import FaultViewer
 from accessory_widgets.log_export import LogExporter
 from accessory_widgets.log_import import LogImporter
 from accessory_widgets.preferences_editor import PreferencesEditor
@@ -39,6 +40,8 @@ class Main(QtWidgets.QMainWindow):
         # Load Configurations (dictionaries)
         self.daq_config = utils.load_json_config(config['daq_config_path'], config['daq_schema_path'])
         self.can_config = utils.load_json_config(config['can_config_path'], config['can_schema_path'])
+        self.fault_config = utils.load_json_config(config['fault_config_path'], config['fault_schema_path'])
+        self.create_ids()
 
         # Can Bus Initialization
         self.can_bus = CanBus(config['dbc_path'], config['default_ip'], self.can_config)
@@ -83,6 +86,7 @@ class Main(QtWidgets.QMainWindow):
         self.ui.cellViewer  = CellViewer(self.can_bus)
         self.ui.logExporter = LogExporter(self.can_bus)
         self.ui.bootloader  = Bootloader(self.can_bus, config['firmware_path'])
+        self.ui.faultViewer = FaultViewer(self.can_bus, self.fault_config)
 
         # Dashboard Layout
         self.ui.dashboardLayout = QtWidgets.QGridLayout()
@@ -108,6 +112,7 @@ class Main(QtWidgets.QMainWindow):
         self.ui.actionCell_Viewer.triggered.connect(self.viewCellViewer)
         self.ui.actionLog_Exporter.triggered.connect(self.viewLogExporter)
         self.ui.actionBootloader.triggered.connect(self.viewBootloader)
+        self.ui.actionFaultViewer.triggered.connect(self.viewFaultViewer)
         self.ui.actionLCD.triggered.connect(self.newLCD)
         self.ui.actionPlot.triggered.connect(self.newPlot)
         self.ui.actionRemoveWidget.triggered.connect(self.removeDisplayWidget)
@@ -124,7 +129,7 @@ class Main(QtWidgets.QMainWindow):
         self.can_bus.start()
         # self.can_bus.reconnect()
         self.show()
-    
+
     def updateConnectionStatus(self, connected: bool):
         """ Updates the connection status label when connect status changes """
         if connected:
@@ -148,7 +153,7 @@ class Main(QtWidgets.QMainWindow):
         else:
             self.ui.varEdit.hide()
             self.ui.accessoryLayout.removeWidget(self.ui.varEdit)
-    
+
     def viewFrameViewer(self, is_visible: bool):
         """ Hides or shows the frame viewer """
         if is_visible:
@@ -166,7 +171,7 @@ class Main(QtWidgets.QMainWindow):
         else:
             self.ui.accessoryLayout.removeWidget(self.ui.cellViewer)
             self.ui.cellViewer.hide()
-    
+
     def viewLogExporter(self, is_visible: bool):
         """ Hides or shows the log exporter """
         if is_visible:
@@ -175,7 +180,7 @@ class Main(QtWidgets.QMainWindow):
         else:
             self.ui.accessoryLayout.removeWidget(self.ui.logExporter)
             self.ui.logExporter.hide()
-    
+
     def viewBootloader(self, is_visible: bool):
         """ Hides or shows the bootloader """
         if is_visible:
@@ -184,6 +189,14 @@ class Main(QtWidgets.QMainWindow):
         else:
             self.ui.accessoryLayout.removeWidget(self.ui.bootloader)
             self.ui.bootloader.hide()
+    def viewFaultViewer(self, is_visible: bool):
+        """ Hides or shows the fault viewer """
+        if is_visible:
+            self.ui.accessoryLayout.addWidget(self.ui.faultViewer)
+            self.ui.faultViewer.show()
+        else:
+            self.ui.accessoryLayout.removeWidget(self.ui.faultViewer)
+            self.ui.faultViewer.hide()
 
     def newLCD(self):
         """ Adds a new LCD dashboard widget """
@@ -216,7 +229,7 @@ class Main(QtWidgets.QMainWindow):
         """ removes a display widget and resets the grid locations """
         for w in self.ui.display_widgets:
             self.ui.dashboardLayout.removeWidget(w)
-        widgets_to_delete = WidgetDeleter.getWidgets(self.ui.display_widgets)        
+        widgets_to_delete = WidgetDeleter.getWidgets(self.ui.display_widgets)
         for w in widgets_to_delete:
             w.destroy()
             self.ui.display_widgets.remove(w)
@@ -252,7 +265,7 @@ class Main(QtWidgets.QMainWindow):
         widgets = config.split(';')
         for w in widgets[:-1]:
             name, sigs = w.split(':')
-            sig_def = json.loads(sigs) 
+            sig_def = json.loads(sigs)
             chosen_sigs = []
             for sig in sig_def[0]:
                 if sig[0] != utils.b_str:
@@ -321,13 +334,13 @@ class Main(QtWidgets.QMainWindow):
         else:
             self.ui.actionPlayPause.setIcon(self.ui.play_icon)
         self.can_bus.pause(not self.recording)
-    
+
     def clearData(self):
         """ Clears recorded signal values """
         utils.clearDictItems(utils.signals)
         utils.clearEvents()
         self.can_bus.start_time_bus = -1
-    
+
     def logEvent(self):
         """ Logs and event, recording the timestamp """
         t = time.time() - self.can_bus.start_time_cmp
@@ -343,6 +356,28 @@ class Main(QtWidgets.QMainWindow):
         self.can_bus.disconnect_bus()
         event.accept()
 
+    def create_ids(self):
+       num = 0
+       idx = 0
+       for node in self.fault_config['modules']:
+           for fault in node['faults']:
+               #id : Owner (MCU) = 4 bits, Index in fault array = 12 bits
+               id = ((num << 12) | (idx & 0x0fff))
+               # print(hex(id))
+               fault['id'] =  id
+               idx += 1
+           num += 1
+       id = 0
+       for node in self.fault_config['modules']:
+           node['name_interp'] = id
+           id += 1
+       for node in self.fault_config['modules']:
+           try:
+               node['can_name']
+           except KeyError:
+               node['can_name'] = node['node_name']
+           except:
+               print("An error occured configuring a node.")
 
 if __name__ == "__main__":
     utils.initGlobals()
