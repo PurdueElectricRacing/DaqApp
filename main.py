@@ -37,6 +37,7 @@ class Main(QtWidgets.QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
+        print(sys.platform)
         # Load Configurations (dictionaries)
         self.daq_config = utils.load_json_config(config['daq_config_path'], config['daq_schema_path'])
         self.can_config = utils.load_json_config(config['can_config_path'], config['can_schema_path'])
@@ -86,7 +87,7 @@ class Main(QtWidgets.QMainWindow):
         self.ui.cellViewer  = CellViewer(self.can_bus)
         self.ui.logExporter = LogExporter(self.can_bus)
         self.ui.bootloader  = Bootloader(self.can_bus, config['firmware_path'])
-        self.ui.faultViewer = FaultViewer(self.can_bus, self.fault_config)
+        self.ui.faultViewer = FaultViewer(self.can_bus, self.fault_config, self.daq_protocol)
 
         # Dashboard Layout
         self.ui.dashboardLayout = QtWidgets.QGridLayout()

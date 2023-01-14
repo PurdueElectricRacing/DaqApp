@@ -29,9 +29,9 @@ DAQ_ID_MASK   = 0b11111
 class DAQVariable(BusSignal):
     """ DAQ variable that can be subscribed (connected) to for receiving updates"""
 
-    def __init__(self, bus_name, node_name, message_name, signal_name, daq_id, read_only, 
+    def __init__(self, bus_name, node_name, message_name, signal_name, daq_id, read_only,
                  bit_length, eeprom_enabled):
-        super(DAQVariable, self).__init__(bus_name, node_name, 
+        super(DAQVariable, self).__init__(bus_name, node_name,
                                           message_name, signal_name, "", np.dtype('<u'+str(math.ceil(bit_length/8))))
         self.id = daq_id
         self.read_only = read_only
@@ -59,7 +59,7 @@ class DaqProtocol(QtCore.QObject):
         """ Requests to read a variable, expects a reply """
         dbc_msg = self.can_bus.db.get_message_by_name(f"daq_command_{var.node_name.upper()}")
         data = [((var.id & DAQ_ID_MASK) << DAQ_CMD_LENGTH) | DAQ_CMD_READ]
-        self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id, 
+        self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id,
                                          is_extended_id=True,
                                          data=data))
 
@@ -70,10 +70,10 @@ class DaqProtocol(QtCore.QObject):
         # LSB, add variable data to byte array
         for i in range(math.ceil(var.bit_length / 8)):
             data.append((new_val >> i * 8) & 0xFF)
-        self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id, 
+        self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id,
                                          is_extended_id=True,
                                          data=data))
-        
+
     def saveVar(self, var: DAQVariable):
         """ Saves variable state in eeprom, expects save complete reply """
         if not var.eeprom_enabled:
@@ -81,13 +81,13 @@ class DaqProtocol(QtCore.QObject):
             return
         dbc_msg = self.can_bus.db.get_message_by_name(f"daq_command_{var.node_name.upper()}")
         data = [((var.id & DAQ_ID_MASK) << DAQ_CMD_LENGTH) | DAQ_CMD_SAVE]
-        self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id, 
+        self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id,
                                         is_extended_id=True,
                                         data=data))
         self.save_in_progress = True
         self.last_save_request_id = var.id
         self.save_in_progress_sig.emit(True)
-    
+
     def loadVar(self, var: DAQVariable):
         """ Loads a variable from eeprom, cannot be performed during save operation """
         if not var.eeprom_enabled or var.read_only:
@@ -98,7 +98,7 @@ class DaqProtocol(QtCore.QObject):
             return
         dbc_msg = self.can_bus.db.get_message_by_name(f"daq_command_{var.node_name.upper()}")
         data = [((var.id & DAQ_ID_MASK) << DAQ_CMD_LENGTH) | DAQ_CMD_LOAD]
-        self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id, 
+        self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id,
                                          is_extended_id=True,
                                          data=data))
 
@@ -108,16 +108,32 @@ class DaqProtocol(QtCore.QObject):
         dbc_msg = self.can_bus.db.get_message_by_name(f"daq_command_{var.node_name.upper()}")
         data = [((var.id & DAQ_ID_MASK) << DAQ_CMD_LENGTH) | DAQ_CMD_PUB_START]
         data.append(int(period_ms / 15) & 0xFF)
-        self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id, 
+        self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id,
                                          is_extended_id=True,
                                          data=data))
+
+    def forceFault(self, id, state):
+        print(f"Id: {id}, State: {state}")
+        fault_msg = self.can_bus.db.get_message_by_name(f"set_fault")
+        data = fault_msg.encode({"id": id, "value": state})
+        self.can_bus.sendMsg(can.Message(arbitration_id=fault_msg.frame_id,
+                                        is_extended_id=True,
+                                        data=data))
+
+    def unforceFault(self, id):
+        print(f"Id: {id}. Returning control!")
+        fault_msg = self.can_bus.db.get_message_by_name(f"return_fault_control")
+        data = fault_msg.encode({"id": id})
+        self.can_bus.sendMsg(can.Message(arbitration_id=fault_msg.frame_id,
+                                        is_extended_id=True,
+                                        data=data))
 
     def pubVarStop(self, var: DAQVariable):
         """ Requests to stop publishing a variable """
         var.pub_period_ms = 0
         dbc_msg = self.can_bus.db.get_message_by_name(f"daq_command_{var.node_name.upper()}")
         data = [((var.id & DAQ_ID_MASK) << DAQ_CMD_LENGTH) | DAQ_CMD_PUB_STOP]
-        self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id, 
+        self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id,
                                          is_extended_id=True,
                                          data=data))
 
@@ -146,7 +162,7 @@ class DaqProtocol(QtCore.QObject):
                 id = (data >> curr_bit) & DAQ_ID_MASK
                 curr_bit += DAQ_ID_LENGTH
                 if self.last_save_request_id == id:
-                    self.save_in_progress = False 
+                    self.save_in_progress = False
                     self.save_in_progress_sig.emit(False)
             elif cmd == DAQ_RPLY_READ_ERROR:
                 id = (data >> curr_bit) & DAQ_ID_MASK
@@ -179,6 +195,6 @@ class DaqProtocol(QtCore.QObject):
                 for var in node['variables']:
                     # create new variable
                     utils.signals[bus['bus_name']][node['node_name']][f"daq_response_{node['node_name'].upper()}"][var['var_name']] = DAQVariable(
-                                   bus['bus_name'], node['node_name'], f"daq_response_{node['node_name'].upper()}", var['var_name'], id_counter, 
+                                   bus['bus_name'], node['node_name'], f"daq_response_{node['node_name'].upper()}", var['var_name'], id_counter,
                                    var['read_only'], var['bit_length'], "eeprom" in var)
                     id_counter += 1

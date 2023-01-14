@@ -3,6 +3,7 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtWidgets import QTreeWidgetItem
 from ui.faultViewer import Ui_FaultViewer
 from communication.can_bus import CanBus
+from communication.daq_protocol import DaqProtocol
 import utils
 import json
 import can
@@ -13,18 +14,21 @@ class FaultViewer(QtWidgets.QWidget):
 
     data_lock = threading.Lock()
 
-    def __init__(self, bus: CanBus, faultConfig, parent=None):
+    def __init__(self, bus: CanBus, faultConfig, daq_protocol: DaqProtocol, parent=None):
         super(FaultViewer, self).__init__(parent)
         self.ui = Ui_FaultViewer()
         self.ui.setupUi(self)
 
 
+
         self.Config = faultConfig
+        self.daq_protocol = daq_protocol
         # self.setupJSON()
 
 
         self.ui.NodeSelect.activated.connect(self.selectFault)
         self.ui.MessageSend.clicked.connect(self.sendMessage)
+        self.ui.ReturnSend.clicked.connect(self.returnMessage)
 
         self.bus = bus
         bus.new_msg_sig.connect(self.messageRecieved)
@@ -46,17 +50,19 @@ class FaultViewer(QtWidgets.QWidget):
 
 
 
+        self.fps = 10
+        self.timer = QtCore.QTimer()
 
         for node in faultConfig['modules']:
+            node['time_since_rx'] = 0
             self.ui.NodeSelect.addItem(node['node_name'])
             self.addStatusIndicator(node['node_name'])
 
         self.selectFault()
 
 
-        self.fps = 10
-        self.timer = QtCore.QTimer()
-        self.timer.timeout.connect(self.updateTree)
+
+        self.timer.timeout.connect(self.updateTime)
         self.timer.start(int(1000.0/self.fps))
 
     def addStatusIndicator(self, name):
@@ -79,46 +85,58 @@ class FaultViewer(QtWidgets.QWidget):
                     self.ui.FaultSelect.addItem(fault['fault_name'])
 
     def sendMessage(self):
+        state = 1
         print(f"Message: \nNode: {self.ui.NodeSelect.currentText()}\nFault: {self.ui.FaultSelect.currentText()}")
         if self.ui.Zero.isChecked():
            print("Value: 0")
+           state = 0
         else:
            print("Value: 1")
+        for node in self.Config['modules']:
+            if ((str)(node['node_name']).lower() == (str)(self.ui.NodeSelect.currentText()).lower()):
+                for fault in node['faults']:
+                    if ((str)(fault['fault_name']).lower() == (str)(self.ui.FaultSelect.currentText()).lower()):
+                        self.daq_protocol.forceFault(fault['id'], state)
 
-    def updateTree(self):
-        return
+    def returnMessage(self):
+        for node in self.Config['modules']:
+            if ((str)(node['node_name']).lower() == (str)(self.ui.NodeSelect.currentText()).lower()):
+                for fault in node['faults']:
+                    if ((str)(fault['fault_name']).lower() == (str)(self.ui.FaultSelect.currentText()).lower()):
+                        self.daq_protocol.unforceFault(fault['id'])
+
+
+    def updateTime(self):
+        for idx, node in enumerate(self.Config['modules']):
+            if node['time_since_rx'] > 3:
+                self.ui.indicators[idx].setChecked(False)
+                for idx2, fault in enumerate(node['faults']):
+                    self.ui.Info.topLevelItem(idx).child(idx2).setText(1, "N/A")
+            else:
+                node['time_since_rx'] += 1
+
     def messageRecieved(self, msg: can.Message):
         # Try to decode message
         index = -1
         latched = -1
-        foundidx = False
-        foundLatch = False
         try:
             dbc_msg = self.bus.db.get_message_by_frame_id(msg.arbitration_id)
             try:
                 decode_msg = dbc_msg.decode(msg.data)
-                for idx, sig in enumerate(decode_msg):
-                    if (type(decode_msg[sig]) != str):
-                        if sig == "idx":
-                            index = decode_msg[sig]
-                            foundidx = True
-                        if sig == "latched":
-                            latched = decode_msg[sig]
-                            foundLatch = True
+                index = decode_msg['idx']
+                latched = decode_msg['latched']
             except ValueError as e:
                 data = hex(int.from_bytes(msg.data, "little"))
                 utils.log_warning(e)
         except KeyError:
             return
         with self.data_lock:
-            if foundidx and foundLatch:
-                for idx1, node in enumerate(self.Config['modules']):
-                    for idx2, fault in enumerate(node['faults']):
-                        if fault['id'] == index:
-                            item = self.ui.Info.topLevelItem(idx1).child(idx2)
-                            item.setText(1, (str)(latched))
-                            indicator = self.ui.indicators[idx1]
-                            indicator.setChecked(True)
-                            indicator.show
-                foundidx = False
-                foundLatch = False
+            for idx1, node in enumerate(self.Config['modules']):
+                for idx2, fault in enumerate(node['faults']):
+                    if fault['id'] == index:
+                        item = self.ui.Info.topLevelItem(idx1).child(idx2)
+                        item.setText(1, (str)(latched))
+                        indicator = self.ui.indicators[idx1]
+                        indicator.setChecked(True)
+                        node['time_since_rx'] = 0
+                        indicator.show

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>783</width>
-    <height>403</height>
+    <height>415</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -142,7 +142,7 @@
             </widget>
            </item>
            <item>
-            <layout class="QHBoxLayout" name="MessageConfigurator" stretch="1,5,1">
+            <layout class="QHBoxLayout" name="MessageConfigurator" stretch="1,5,0">
              <item>
               <layout class="QVBoxLayout" name="FaultStatusSelect">
                <item>
@@ -165,11 +165,22 @@
               <widget class="QComboBox" name="FaultSelect"/>
              </item>
              <item>
-              <widget class="QPushButton" name="MessageSend">
-               <property name="text">
-                <string>Force</string>
-               </property>
-              </widget>
+              <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0,0">
+               <item>
+                <widget class="QPushButton" name="MessageSend">
+                 <property name="text">
+                  <string>Force</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="ReturnSend">
+                 <property name="text">
+                  <string>Return Control</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
              </item>
             </layout>
            </item>
