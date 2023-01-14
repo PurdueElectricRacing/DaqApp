@@ -23,9 +23,8 @@ class FaultViewer(QtWidgets.QWidget):
 
         self.Config = faultConfig
         self.daq_protocol = daq_protocol
-        # self.setupJSON()
 
-
+        #Connect actions
         self.ui.NodeSelect.activated.connect(self.selectFault)
         self.ui.MessageSend.clicked.connect(self.sendMessage)
         self.ui.ReturnSend.clicked.connect(self.returnMessage)
@@ -38,6 +37,7 @@ class FaultViewer(QtWidgets.QWidget):
 
         self.ui.Zero.setChecked(True)
 
+        #Set up QTreewidget
         self.ui.Info.setColumnCount(2)
         self.ui.Info.setHeaderLabels(["Fault", "Status", "ID"])
 
@@ -49,7 +49,7 @@ class FaultViewer(QtWidgets.QWidget):
             self.ui.Info.addTopLevelItem(item)
 
 
-
+        #Setup Status indicators
         self.fps = 10
         self.timer = QtCore.QTimer()
 
@@ -66,6 +66,7 @@ class FaultViewer(QtWidgets.QWidget):
         self.timer.start(int(1000.0/self.fps))
 
     def addStatusIndicator(self, name):
+        """Add Radio buttons representing node status"""
         indic = QtWidgets.QRadioButton(self)
         font = QtGui.QFont()
         font.setPointSize(10)
@@ -77,6 +78,7 @@ class FaultViewer(QtWidgets.QWidget):
         self.ui.nodeStatus.insertWidget(len(self.ui.indicators), indic)
 
     def selectFault(self):
+        """Populates bottom combobox with faults depending on node in main combobox"""
         self.ui.FaultSelect.clear()
         for node in self.Config['modules']:
             content = self.ui.NodeSelect.currentText()
@@ -85,8 +87,8 @@ class FaultViewer(QtWidgets.QWidget):
                     self.ui.FaultSelect.addItem(fault['fault_name'])
 
     def sendMessage(self):
+        """Generate a CAN message to send to nodes to force a fault"""
         state = 1
-        print(f"Message: \nNode: {self.ui.NodeSelect.currentText()}\nFault: {self.ui.FaultSelect.currentText()}")
         if self.ui.Zero.isChecked():
            print("Value: 0")
            state = 0
@@ -99,6 +101,7 @@ class FaultViewer(QtWidgets.QWidget):
                         self.daq_protocol.forceFault(fault['id'], state)
 
     def returnMessage(self):
+        """Generate a CAN message to send to nodes to return control of forced faults"""
         for node in self.Config['modules']:
             if ((str)(node['node_name']).lower() == (str)(self.ui.NodeSelect.currentText()).lower()):
                 for fault in node['faults']:
@@ -107,6 +110,7 @@ class FaultViewer(QtWidgets.QWidget):
 
 
     def updateTime(self):
+        """Make Status radio buttons display the offline nodes, make sure that no stale faults are viewable"""
         for idx, node in enumerate(self.Config['modules']):
             if node['time_since_rx'] > 3:
                 self.ui.indicators[idx].setChecked(False)
@@ -116,6 +120,8 @@ class FaultViewer(QtWidgets.QWidget):
                 node['time_since_rx'] += 1
 
     def messageRecieved(self, msg: can.Message):
+        """Decode incoming fault messages, update qTreewidget with correct fault, and
+            make sure node status is live"""
         # Try to decode message
         index = -1
         latched = -1
