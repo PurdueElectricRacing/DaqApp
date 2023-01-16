@@ -39,12 +39,12 @@ class FaultViewer(QtWidgets.QWidget):
 
         #Set up QTreewidget
         self.ui.Info.setColumnCount(2)
-        self.ui.Info.setHeaderLabels(["Fault", "Status", "ID"])
+        self.ui.Info.setHeaderLabels(["Fault", "Status", "Priority"])
 
         for node in faultConfig['modules']:
             item = QTreeWidgetItem([node['node_name']])
             for fault in node['faults']:
-                child = QTreeWidgetItem([fault['fault_name'], 'N/A', hex(fault['id'])])
+                child = QTreeWidgetItem([fault['fault_name'], 'N/A', fault['priority'].upper()])
                 item.addChild(child)
             self.ui.Info.addTopLevelItem(item)
 
