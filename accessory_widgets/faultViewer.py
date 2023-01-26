@@ -90,10 +90,8 @@ class FaultViewer(QtWidgets.QWidget):
         """Generate a CAN message to send to nodes to force a fault"""
         state = 1
         if self.ui.Zero.isChecked():
-           print("Value: 0")
            state = 0
-        else:
-           print("Value: 1")
+        #Find and Send the message
         for node in self.Config['modules']:
             if ((str)(node['node_name']).lower() == (str)(self.ui.NodeSelect.currentText()).lower()):
                 for fault in node['faults']:
@@ -113,6 +111,7 @@ class FaultViewer(QtWidgets.QWidget):
         """Make Status radio buttons display the offline nodes, make sure that no stale faults are viewable"""
         for idx, node in enumerate(self.Config['modules']):
             if node['time_since_rx'] > 3:
+                #Message missed for over 3 cycles, now shows up as offline
                 self.ui.indicators[idx].setChecked(False)
                 for idx2, fault in enumerate(node['faults']):
                     self.ui.Info.topLevelItem(idx).child(idx2).setText(1, "N/A")
@@ -137,6 +136,7 @@ class FaultViewer(QtWidgets.QWidget):
         except KeyError:
             return
         with self.data_lock:
+            #Update message value on display
             for idx1, node in enumerate(self.Config['modules']):
                 for idx2, fault in enumerate(node['faults']):
                     if fault['id'] == index:
