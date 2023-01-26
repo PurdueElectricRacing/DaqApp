@@ -44,7 +44,7 @@ class Main(QtWidgets.QMainWindow):
         self.daq_config = utils.load_json_config(config['daq_config_path'], config['daq_schema_path'])
         self.can_config = utils.load_json_config(config['can_config_path'], config['can_schema_path'])
         self.fault_config = utils.load_json_config(config['fault_config_path'], config['fault_schema_path'])
-        self.create_ids()
+        self.fault_config = DaqProtocol.create_ids(self, self.fault_config)
 
         # Can Bus Initialization
         self.can_bus = CanBus(config['dbc_path'], config['default_ip'], self.can_config)

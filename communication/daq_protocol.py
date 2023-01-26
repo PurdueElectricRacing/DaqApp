@@ -232,10 +232,10 @@ class DaqProtocol(QtCore.QObject):
                                         is_extended_id=True,
                                         data=data))
 
-    def create_ids(self):
+    def create_ids(self, fault_config):
        num = 0
        idx = 0
-       for node in self.fault_config['modules']:
+       for node in fault_config['modules']:
            for fault in node['faults']:
                #id : Owner (MCU) = 4 bits, Index in fault array = 12 bits
                id = ((num << 12) | (idx & 0x0fff))
@@ -244,16 +244,17 @@ class DaqProtocol(QtCore.QObject):
                idx += 1
            num += 1
        id = 0
-       for node in self.fault_config['modules']:
+       for node in fault_config['modules']:
            node['name_interp'] = id
            id += 1
-       for node in self.fault_config['modules']:
+       for node in fault_config['modules']:
            try:
                node['can_name']
            except KeyError:
                node['can_name'] = node['node_name']
            except:
                print("An error occured configuring a node.")
+       return fault_config
 
     def unforceFault(self, id):
         print(f"Id: {id}. Returning control!")
