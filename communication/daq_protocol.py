@@ -36,9 +36,10 @@ TODO: parsing, import file vars as signals
 class DAQVariable(BusSignal):
     """ DAQ variable that can be subscribed (connected) to for receiving updates"""
 
-    def __init__(self, bus_name, node_name, msg_name, sig_name, id, read_only, bit_length,
+
+    def __init__(self, bus_name, node_name, msg_name, sig_name, id, read_only, bit_length, 
                  dtype, store_dtype=None, unit="", msg_desc="", sig_desc="", msg_period=0, file_name=None, file_lbl=None, scale=1, offset=0):
-        super(DAQVariable, self).__init__(bus_name, node_name, msg_name, sig_name, dtype, store_dtype=store_dtype,
+        super(DAQVariable, self).__init__(bus_name, node_name, msg_name, sig_name, dtype, store_dtype=store_dtype, 
                                           unit=unit, msg_desc=msg_desc, sig_desc=sig_desc, msg_period=msg_period)
         self.id = id
         self.read_only = read_only
@@ -51,7 +52,6 @@ class DAQVariable(BusSignal):
         self.offset = offset
 
         self.is_dirty = False
-
 
     def fromDAQVar(id, var, node, bus):
         send_dtype = utils.data_types[var['type']]
@@ -71,10 +71,11 @@ class DAQVariable(BusSignal):
                          id, var['read_only'], bit_length,
                          send_dtype, store_dtype=parse_dtype,
                          unit=(var['unit'] if 'unit' in var else ""),
-                         sig_desc=(var['var_desc'] if 'var_desc' in var else ""),
+                         
+                         sig_desc=(var['var_desc'] if 'var_desc' in var else ""), 
                          scale=(var['scale'] if 'scale' in var else 1),
                          offset=(var['offset'] if 'offset' in var else 0))
-
+    
     def fromDAQFileVar(id, var, file_name, file_lbl, node, bus):
         send_dtype = utils.data_types[var['type']]
         # If there is scaling going on, don't store as an integer on accident
@@ -135,7 +136,6 @@ class DAQVariable(BusSignal):
         self.is_dirty = dirty
 
 
-
 class DaqProtocol(QtCore.QObject):
     """ Implements CAN daq protocol for modifying and live tracking of variables """
 
@@ -170,10 +170,11 @@ class DaqProtocol(QtCore.QObject):
         for i in range(math.ceil(var.bit_length / 8)):
             data.append(bytes[i])
         var.updateDirty(True)
-        self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id,
+
+        self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id, 
                                          is_extended_id=True,
                                          data=data))
-
+        
     def saveFile(self, var: DAQVariable):
         """ Saves variable state in eeprom, expects save complete reply """
         if var.file_lbl == None:
@@ -186,7 +187,7 @@ class DaqProtocol(QtCore.QObject):
         data.append(ord(lbl[1]))
         data.append(ord(lbl[2]))
         data.append(ord(lbl[3]))
-        self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id,
+        self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id, 
                                         is_extended_id=True,
                                         data=data))
         self.setFileClean(var)
@@ -209,7 +210,7 @@ class DaqProtocol(QtCore.QObject):
         data.append(ord(lbl[1]))
         data.append(ord(lbl[2]))
         data.append(ord(lbl[3]))
-        self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id,
+        self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id, 
                                          is_extended_id=True,
                                          data=data))
         self.setFileClean(var)
@@ -272,6 +273,16 @@ class DaqProtocol(QtCore.QObject):
         self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id,
                                          is_extended_id=True,
                                          data=data))
+    
+    def setFileClean(self, var_in_file: DAQVariable):
+        """ Sets all variables in a file to clean (usually after flushing) """
+        if (var_in_file.file_lbl == None): return
+        node_d = utils.signals[var_in_file.bus_name][var_in_file.node_name]
+        contents = node_d['files'][var_in_file.file]['contents']
+        vars = node_d[var_in_file.message_name]
+        for file_var in contents:
+            vars[file_var].updateDirty(False)
+
 
     def setFileClean(self, var_in_file: DAQVariable):
         """ Sets all variables in a file to clean (usually after flushing) """

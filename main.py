@@ -93,6 +93,7 @@ class Main(QtWidgets.QMainWindow):
         self.ui.chargeViewer  = ChargeViewer(self.can_bus)
         self.ui.faultViewer = FaultViewer(self.can_bus, self.fault_config, self.daq_protocol)
 
+
         # Dashboard Layout
         self.ui.dashboardLayout = QtWidgets.QGridLayout()
         self.ui.dashboardLayoutWidget = QtWidgets.QWidget()
@@ -160,8 +161,6 @@ class Main(QtWidgets.QMainWindow):
         else:
             self.ui.varEdit.hide()
             self.ui.accessoryLayout.removeWidget(self.ui.varEdit)
-
-
     def viewFileViewer(self, is_visible: bool):
         """ Hides or shows the file viewer  """
         if is_visible:
@@ -170,8 +169,7 @@ class Main(QtWidgets.QMainWindow):
         else:
             self.ui.fileViewer.hide()
             self.ui.accessoryLayout.removeWidget(self.ui.fileViewer)
-
-
+            
     def viewFrameViewer(self, is_visible: bool):
         """ Hides or shows the frame viewer """
         if is_visible:

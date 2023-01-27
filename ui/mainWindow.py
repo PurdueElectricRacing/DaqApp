@@ -147,3 +147,4 @@ class Ui_MainWindow(object):
         self.actionCharge_Viewer.setText(_translate("MainWindow", "Charge Viewer"))
         self.actionFile_Viewer.setText(_translate("MainWindow", "File Viewer"))
         self.actionFaultViewer.setText(_translate("MainWindow", "Fault Viewer"))
+
