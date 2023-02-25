@@ -36,6 +36,7 @@ TODO: parsing, import file vars as signals
 class DAQVariable(BusSignal):
     """ DAQ variable that can be subscribed (connected) to for receiving updates"""
 
+
     def __init__(self, bus_name, node_name, msg_name, sig_name, id, read_only, bit_length, 
                  dtype, store_dtype=None, unit="", msg_desc="", sig_desc="", msg_period=0, file_name=None, file_lbl=None, scale=1, offset=0):
         super(DAQVariable, self).__init__(bus_name, node_name, msg_name, sig_name, dtype, store_dtype=store_dtype, 
@@ -52,7 +53,6 @@ class DAQVariable(BusSignal):
 
         self.is_dirty = False
 
-    
     def fromDAQVar(id, var, node, bus):
         send_dtype = utils.data_types[var['type']]
         # If there is scaling going on, don't store as an integer on accident
@@ -71,6 +71,7 @@ class DAQVariable(BusSignal):
                          id, var['read_only'], bit_length,
                          send_dtype, store_dtype=parse_dtype,
                          unit=(var['unit'] if 'unit' in var else ""),
+                         
                          sig_desc=(var['var_desc'] if 'var_desc' in var else ""), 
                          scale=(var['scale'] if 'scale' in var else 1),
                          offset=(var['offset'] if 'offset' in var else 0))
@@ -133,7 +134,6 @@ class DAQVariable(BusSignal):
     def updateDirty(self, dirty):
         if self.file_lbl == None: return
         self.is_dirty = dirty
-        
 
 
 class DaqProtocol(QtCore.QObject):
@@ -157,7 +157,7 @@ class DaqProtocol(QtCore.QObject):
         """ Requests to read a variable, expects a reply """
         dbc_msg = self.can_bus.db.get_message_by_name(f"daq_command_{var.node_name.upper()}")
         data = [((var.id & DAQ_ID_MASK) << DAQ_CMD_LENGTH) | DAQ_CMD_READ]
-        self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id, 
+        self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id,
                                          is_extended_id=True,
                                          data=data))
 
@@ -170,6 +170,7 @@ class DaqProtocol(QtCore.QObject):
         for i in range(math.ceil(var.bit_length / 8)):
             data.append(bytes[i])
         var.updateDirty(True)
+
         self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id, 
                                          is_extended_id=True,
                                          data=data))
@@ -193,7 +194,7 @@ class DaqProtocol(QtCore.QObject):
         # self.save_in_progress = True
         # self.last_save_request_id = var.id
         # self.save_in_progress_sig.emit(True)
-    
+
     def loadFile(self, var: DAQVariable):
         """ Loads a variable from eeprom, cannot be performed during save operation """
         if var.file_lbl == None:
@@ -220,19 +221,69 @@ class DaqProtocol(QtCore.QObject):
         dbc_msg = self.can_bus.db.get_message_by_name(f"daq_command_{var.node_name.upper()}")
         data = [((var.id & DAQ_ID_MASK) << DAQ_CMD_LENGTH) | DAQ_CMD_PUB_START]
         data.append(int(period_ms / 15) & 0xFF)
-        self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id, 
+        self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id,
                                          is_extended_id=True,
                                          data=data))
+
+    def forceFault(self, id, state):
+        print(f"Id: {id}, State: {state}")
+        fault_msg = self.can_bus.db.get_message_by_name(f"set_fault")
+        data = fault_msg.encode({"id": id, "value": state})
+        self.can_bus.sendMsg(can.Message(arbitration_id=fault_msg.frame_id,
+                                        is_extended_id=True,
+                                        data=data))
+
+    def create_ids(self, fault_config):
+       num = 0
+       idx = 0
+       for node in fault_config['modules']:
+           for fault in node['faults']:
+               #id : Owner (MCU) = 4 bits, Index in fault array = 12 bits
+               id = ((num << 12) | (idx & 0x0fff))
+               # print(hex(id))
+               fault['id'] =  id
+               idx += 1
+           num += 1
+       id = 0
+       for node in fault_config['modules']:
+           node['name_interp'] = id
+           id += 1
+       for node in fault_config['modules']:
+           try:
+               node['can_name']
+           except KeyError:
+               node['can_name'] = node['node_name']
+           except:
+               print("An error occured configuring a node.")
+       return fault_config
+
+    def unforceFault(self, id):
+        print(f"Id: {id}. Returning control!")
+        fault_msg = self.can_bus.db.get_message_by_name(f"return_fault_control")
+        data = fault_msg.encode({"id": id})
+        self.can_bus.sendMsg(can.Message(arbitration_id=fault_msg.frame_id,
+                                        is_extended_id=True,
+                                        data=data))
 
     def pubVarStop(self, var: DAQVariable):
         """ Requests to stop publishing a variable """
         var.pub_period_ms = 0
         dbc_msg = self.can_bus.db.get_message_by_name(f"daq_command_{var.node_name.upper()}")
         data = [((var.id & DAQ_ID_MASK) << DAQ_CMD_LENGTH) | DAQ_CMD_PUB_STOP]
-        self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id, 
+        self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id,
                                          is_extended_id=True,
                                          data=data))
     
+    def setFileClean(self, var_in_file: DAQVariable):
+        """ Sets all variables in a file to clean (usually after flushing) """
+        if (var_in_file.file_lbl == None): return
+        node_d = utils.signals[var_in_file.bus_name][var_in_file.node_name]
+        contents = node_d['files'][var_in_file.file]['contents']
+        vars = node_d[var_in_file.message_name]
+        for file_var in contents:
+            vars[file_var].updateDirty(False)
+
+
     def setFileClean(self, var_in_file: DAQVariable):
         """ Sets all variables in a file to clean (usually after flushing) """
         if (var_in_file.file_lbl == None): return
@@ -268,7 +319,7 @@ class DaqProtocol(QtCore.QObject):
                 id = (data >> curr_bit) & DAQ_ID_MASK
                 curr_bit += DAQ_ID_LENGTH
                 if self.last_save_request_id == id:
-                    self.save_in_progress = False 
+                    self.save_in_progress = False
                     self.save_in_progress_sig.emit(False)
             elif cmd == DAQ_RPLY_READ_ERROR:
                 id = (data >> curr_bit) & DAQ_ID_MASK

@@ -21,7 +21,7 @@ class CellViewer(QtWidgets.QWidget):
 
         # Configure Horizontal Headers
         self.ui.msgTable.setColumnCount(8)
-        self.ui.msgTable.setHorizontalHeaderLabels(["", "Module 1", 
+        self.ui.msgTable.setHorizontalHeaderLabels(["", "Module 1",
                          "", "Module 2", "", "Module 3", "", "Module 4"])
         header = self.ui.msgTable.horizontalHeader()
         header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
@@ -44,8 +44,8 @@ class CellViewer(QtWidgets.QWidget):
 
         # Set cell numbers
         for cell in range(self.num_cells):
-            self.ui.msgTable.setItem(cell % (self.num_cells / self.num_modules) + 1, 
-                                     math.floor(cell / (self.num_cells / self.num_modules)) * 2, 
+            self.ui.msgTable.setItem(cell % (int)(self.num_cells / self.num_modules) + 1,
+                                     math.floor(cell / (self.num_cells / self.num_modules)) * 2,
                                      QtWidgets.QTableWidgetItem(str(cell + 1)))
         # Set temp labels
         self.ui.msgTable.setItem(0, 0, QtWidgets.QTableWidgetItem('Avg Tmp'))
@@ -81,7 +81,7 @@ class CellViewer(QtWidgets.QWidget):
     def messageReceived(self):
         """ Updates cells based on message contents """
         if self.sigs_exist:
-            idx = self.mux_sig.curr_val    
+            idx = self.mux_sig.curr_val
             with self.data_lock:
                 self.cell_volts[idx]     = self.cell1.curr_val / 10000
                 self.cell_volts[idx + 1] = self.cell2.curr_val / 10000
@@ -93,8 +93,8 @@ class CellViewer(QtWidgets.QWidget):
         if (self.sigs_exist):
             with self.data_lock:
                 for cell in range(self.num_cells):
-                    self.ui.msgTable.setItem((cell % (self.num_cells / self.num_modules)) + 1, 
-                                            math.floor(cell / (self.num_cells / self.num_modules)) * 2 + 1, 
+                    self.ui.msgTable.setItem((cell % (self.num_cells / self.num_modules)) + 1,
+                                            math.floor(cell / (self.num_cells / self.num_modules)) * 2 + 1,
                                             QtWidgets.QTableWidgetItem(str(self.cell_volts[cell])))
                     self.ui.avgV.setText(str(round(np.mean(self.cell_volts), 2)))
                     self.ui.maxV.setText(str(np.max(self.cell_volts)))
@@ -107,9 +107,9 @@ class CellViewer(QtWidgets.QWidget):
             self.ui.maxT.setText(str(self.maxT.curr_val))
 
 
-                
+
         else:
             for cell in range(self.num_cells):
-                self.ui.msgTable.setItem(cell % (self.num_cells / self.num_modules) + 1, 
-                                        math.floor(cell / (self.num_cells / self.num_modules)) * 2 + 1, 
+                self.ui.msgTable.setItem(cell % (int)(self.num_cells / self.num_modules) + 1,
+                                        math.floor(cell / (self.num_cells / self.num_modules)) * 2 + 1,
                                         QtWidgets.QTableWidgetItem('Error'))

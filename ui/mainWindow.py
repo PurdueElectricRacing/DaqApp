@@ -91,6 +91,9 @@ class Ui_MainWindow(object):
         self.actionFile_Viewer = QtWidgets.QAction(MainWindow)
         self.actionFile_Viewer.setCheckable(True)
         self.actionFile_Viewer.setObjectName("actionFile_Viewer")
+        self.actionFaultViewer = QtWidgets.QAction(MainWindow)
+        self.actionFaultViewer.setCheckable(True)
+        self.actionFaultViewer.setObjectName("actionFaultViewer")
         self.menuHelp.addAction(self.actionAbout)
         self.menuView.addAction(self.actionVariable_Editor)
         self.menuView.addAction(self.actionFile_Viewer)
@@ -99,6 +102,7 @@ class Ui_MainWindow(object):
         self.menuView.addAction(self.actionCell_Viewer)
         self.menuView.addAction(self.actionBootloader)
         self.menuView.addAction(self.actionCharge_Viewer)
+        self.menuView.addAction(self.actionFaultViewer)
         self.menuEdit.addAction(self.actionLCD)
         self.menuEdit.addAction(self.actionPlot)
         self.menuEdit.addSeparator()
@@ -142,3 +146,5 @@ class Ui_MainWindow(object):
         self.actionBootloader.setText(_translate("MainWindow", "Bootloader"))
         self.actionCharge_Viewer.setText(_translate("MainWindow", "Charge Viewer"))
         self.actionFile_Viewer.setText(_translate("MainWindow", "File Viewer"))
+        self.actionFaultViewer.setText(_translate("MainWindow", "Fault Viewer"))
+
