@@ -8,6 +8,8 @@ from accessory_widgets.log_import import LogImporter
 from accessory_widgets.preferences_editor import PreferencesEditor
 from accessory_widgets.variable_editor import VariableEditor
 from accessory_widgets.file_viewer import FileViewer
+from accessory_widgets.sensor_viewer import SensorViewer
+from accessory_widgets.system_monitor import SystemMonitor
 from display_widgets.plot_widget import PlotWidget
 from display_widgets import plot_widget
 from communication.can_bus import CanBus
@@ -87,6 +89,8 @@ class Main(QtWidgets.QMainWindow):
         self.ui.logExporter = LogExporter(self.can_bus)
         self.ui.bootloader  = Bootloader(self.can_bus, config['firmware_path'])
         self.ui.chargeViewer  = ChargeViewer(self.can_bus)
+        self.ui.sensorViewer = SensorViewer(self.can_bus)
+        self.ui.systemMonitor = SystemMonitor(self.can_bus)
 
         # Dashboard Layout
         self.ui.dashboardLayout = QtWidgets.QGridLayout()
@@ -107,13 +111,15 @@ class Main(QtWidgets.QMainWindow):
 
         # Menu Action Connections
         self.ui.actionImport_log.triggered.connect(lambda : LogImporter.importLog(self.can_bus, self))
-        self.ui.actionVariable_Editor.triggered.connect(self.viewVariableEditor)
-        self.ui.actionFile_Viewer.triggered.connect(self.viewFileViewer)
-        self.ui.actionFrame_Viewer.triggered.connect(self.viewFrameViewer)
-        self.ui.actionCell_Viewer.triggered.connect(self.viewCellViewer)
-        self.ui.actionLog_Exporter.triggered.connect(self.viewLogExporter)
-        self.ui.actionBootloader.triggered.connect(self.viewBootloader)
-        self.ui.actionCharge_Viewer.triggered.connect(self.viewChargeViewer)
+        self.ui.actionVariable_Editor.triggered.connect(lambda _visible: self.viewWidget(_visible, self.ui.varEdit))
+        self.ui.actionFile_Viewer.triggered.connect(lambda _visible: self.viewWidget(_visible, self.ui.fileViewer))
+        self.ui.actionFrame_Viewer.triggered.connect(lambda _visible: self.viewWidget(_visible, self.ui.frameViewer))
+        self.ui.actionCell_Viewer.triggered.connect(lambda _visible: self.viewWidget(_visible, self.ui.cellViewer))
+        self.ui.actionLog_Exporter.triggered.connect(lambda _visible: self.viewWidget(_visible, self.ui.logExporter))
+        self.ui.actionBootloader.triggered.connect(lambda _visible: self.viewWidget(_visible, self.ui.bootloader))
+        self.ui.actionCharge_Viewer.triggered.connect(lambda _visible: self.viewWidget(_visible, self.ui.chargeViewer))
+        self.ui.actionSensor_Viewer.triggered.connect(lambda _visible: self.viewWidget(_visible, self.ui.sensorViewer))
+        self.ui.actionSystem_Monitor.triggered.connect(lambda _visible: self.viewWidget(_visible, self.ui.systemMonitor))
         self.ui.actionLCD.triggered.connect(self.newLCD)
         self.ui.actionPlot.triggered.connect(self.newPlot)
         self.ui.actionRemoveWidget.triggered.connect(self.removeDisplayWidget)
@@ -124,7 +130,7 @@ class Main(QtWidgets.QMainWindow):
         self.ui.actionClear.triggered.connect(self.clearData)
         self.ui.actionReconnect.triggered.connect(self.can_bus.reconnect)
         self.ui.actionAbout.triggered.connect(lambda: webbrowser.open(
-                            'http://128.46.98.238/display/EL/Data+Acquisition'))
+                            'https://wiki.itap.purdue.edu/display/PER22/Data+Acquisition'))
 
         self.can_bus.connect()
         self.can_bus.start()
@@ -146,70 +152,14 @@ class Main(QtWidgets.QMainWindow):
         """ Updates the bus load label """
         self.ui.loadlbl.setText(f"Bus Load: {load:.2f}%")
 
-    def viewVariableEditor(self, is_visible: bool):
-        """ Hides or shows the variable editor  """
+    def viewWidget(self, is_visible: bool, widget):
+        """ Hides or shows a widget """
         if is_visible:
-            self.ui.accessoryLayout.addWidget(self.ui.varEdit)
-            self.ui.varEdit.show()
+            self.ui.accessoryLayout.addWidget(widget)
+            widget.show()
         else:
-            self.ui.varEdit.hide()
-            self.ui.accessoryLayout.removeWidget(self.ui.varEdit)
-
-    def viewFileViewer(self, is_visible: bool):
-        """ Hides or shows the file viewer  """
-        if is_visible:
-            self.ui.accessoryLayout.addWidget(self.ui.fileViewer)
-            self.ui.fileViewer.show()
-        else:
-            self.ui.fileViewer.hide()
-            self.ui.accessoryLayout.removeWidget(self.ui.fileViewer)
-
-    
-    def viewFrameViewer(self, is_visible: bool):
-        """ Hides or shows the frame viewer """
-        if is_visible:
-            self.ui.accessoryLayout.addWidget(self.ui.frameViewer)
-            self.ui.frameViewer.show()
-        else:
-            self.ui.accessoryLayout.removeWidget(self.ui.frameViewer)
-            self.ui.frameViewer.hide()
-
-    def viewCellViewer(self, is_visible: bool):
-        """ Hides or shows the frame viewer """
-        if is_visible:
-            self.ui.accessoryLayout.addWidget(self.ui.cellViewer)
-            self.ui.cellViewer.show()
-        else:
-            self.ui.accessoryLayout.removeWidget(self.ui.cellViewer)
-            self.ui.cellViewer.hide()
-    
-    def viewLogExporter(self, is_visible: bool):
-        """ Hides or shows the log exporter """
-        if is_visible:
-            self.ui.accessoryLayout.addWidget(self.ui.logExporter)
-            self.ui.logExporter.show()
-        else:
-            self.ui.accessoryLayout.removeWidget(self.ui.logExporter)
-            self.ui.logExporter.hide()
-    
-    def viewBootloader(self, is_visible: bool):
-        """ Hides or shows the bootloader """
-        if is_visible:
-            self.ui.accessoryLayout.addWidget(self.ui.bootloader)
-            self.ui.bootloader.show()
-        else:
-            self.ui.accessoryLayout.removeWidget(self.ui.bootloader)
-            self.ui.bootloader.hide()
-
-    def viewChargeViewer(self, is_visible: bool):
-        """ Hides or shows the bootloader """
-        if is_visible:
-            self.ui.accessoryLayout.addWidget(self.ui.chargeViewer)
-            self.ui.chargeViewer.show()
-        else:
-            self.ui.accessoryLayout.removeWidget(self.ui.chargeViewer)
-            self.ui.chargeViewer.hide()
-
+            self.ui.accessoryLayout.removeWidget(widget)
+            widget.hide()
 
     def newLCD(self):
         """ Adds a new LCD dashboard widget """

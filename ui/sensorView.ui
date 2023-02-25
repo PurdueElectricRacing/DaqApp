@@ -1,0 +1,318 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>sensorView</class>
+ <widget class="QWidget" name="sensorView">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>806</width>
+    <height>584</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="1" column="0">
+    <widget class="QGroupBox" name="groupBox">
+     <property name="font">
+      <font>
+       <pointsize>10</pointsize>
+       <weight>50</weight>
+       <bold>false</bold>
+      </font>
+     </property>
+     <property name="title">
+      <string>Steering Angle</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_2">
+      <item>
+       <widget class="CANVariableDisplay" name="label_4">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Steering.LWS_Standard.LWS_ANGLE</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="CANVariableDisplay" name="label_5">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Steering.LWS_Standard.LWS_SPEED</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="CANVariableDisplay" name="label_6">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Steering.LWS_Standard.Ok</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="CANVariableDisplay" name="label_7">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Steering.LWS_Standard.Cal</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="CANVariableDisplay" name="label_8">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Steering.LWS_Standard.Trim</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="cal_steer_btn">
+        <property name="text">
+         <string>Calibrate</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="3" column="0">
+    <widget class="QGroupBox" name="groupBox_2">
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+      </font>
+     </property>
+     <property name="title">
+      <string>Cooling</string>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <widget class="QGroupBox" name="groupBox_3">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="title">
+         <string>Battery Loop</string>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout">
+         <item>
+          <widget class="CANVariableDisplay" name="label_9">
+           <property name="font">
+            <font>
+             <pointsize>10</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Main_Module.flowrate_temps.battery_in_temp</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="CANVariableDisplay" name="label_10">
+           <property name="font">
+            <font>
+             <pointsize>10</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Main_Module.flowrate_temps.battery_out_temp</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="CANVariableDisplay" name="label_14">
+           <property name="font">
+            <font>
+             <pointsize>10</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Main_Module.flowrate_temps.battery_flowrate</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="CANVariableDisplay" name="label_15">
+           <property name="font">
+            <font>
+             <pointsize>10</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Main_Module.flowrate_temps.battery_fan_speed</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="groupBox_4">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="title">
+         <string>Drivetrain Loop</string>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_3">
+         <item>
+          <widget class="CANVariableDisplay" name="label_11">
+           <property name="font">
+            <font>
+             <pointsize>10</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Main_Module.flowrate_temps.drivetrain_in_temp</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="CANVariableDisplay" name="label_12">
+           <property name="font">
+            <font>
+             <pointsize>10</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Main_Module.flowrate_temps.drivetrain_out_temp</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="CANVariableDisplay" name="label_13">
+           <property name="font">
+            <font>
+             <pointsize>10</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Main_Module.flowrate_temps.drivetrain_flowrate</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="CANVariableDisplay" name="label_16">
+           <property name="font">
+            <font>
+             <pointsize>10</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Main_Module.flowrate_temps.drivetrain_fan_speed</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="0" column="0">
+    <widget class="QGroupBox" name="groupBox_5">
+     <property name="title">
+      <string>Pedals</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_4">
+      <item>
+       <widget class="CANVariableDisplay" name="label_17">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Dashboard.raw_throttle_brake.throttle</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="CANVariableDisplay" name="label_18">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Dashboard.raw_throttle_brake.throttle_right</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="CANVariableDisplay" name="label_19">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Dashboard.raw_throttle_brake.brake</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="CANVariableDisplay" name="label_20">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Dashboard.raw_throttle_brake.brake_right</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="CANVariableDisplay" name="label_21">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Dashboard.raw_throttle_brake.brake_pot</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>CANVariableDisplay</class>
+   <extends>QLabel</extends>
+   <header>display_widgets.variables.can_variable_display</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

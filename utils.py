@@ -13,7 +13,7 @@ def initGlobals():
     global events
     events = []
     global b_str
-    b_str = "Test" # TODO: change!
+    b_str = "Main"
     global data_types
     data_types = {
         'uint8_t':np.dtype('<u1'),

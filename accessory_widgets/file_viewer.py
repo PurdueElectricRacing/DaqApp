@@ -26,8 +26,9 @@ class FileViewer(QtWidgets.QDialog):
                 nodes_with_files.append(node_name)
         self.ui.nodeSelector.addItems(nodes_with_files)
 
-        self.updateFileCombo()
-        self.updateContentList()
+        if (len(nodes_with_files) > 0):
+            self.updateFileCombo()
+            self.updateContentList()
 
         self.fps = 5
         self.var_timer = QtCore.QTimer()
