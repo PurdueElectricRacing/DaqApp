@@ -54,6 +54,8 @@
     <addaction name="actionCell_Viewer"/>
     <addaction name="actionBootloader"/>
     <addaction name="actionCharge_Viewer"/>
+    <addaction name="actionSensor_Viewer"/>
+    <addaction name="actionSystem_Monitor"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -199,6 +201,22 @@
    </property>
    <property name="text">
     <string>File Viewer</string>
+   </property>
+  </action>
+  <action name="actionSensor_Viewer">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Sensor Viewer</string>
+   </property>
+  </action>
+  <action name="actionSystem_Monitor">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>System Monitor</string>
    </property>
   </action>
  </widget>
