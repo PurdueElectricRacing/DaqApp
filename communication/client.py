@@ -17,7 +17,7 @@ class TCPBus(can.BusABC):
     CAN_EFF_FLAG = 0x80000000
     CAN_RTR_FLAG = 0x40000000
     CAN_ERR_FLAG = 0x20000000
-    
+
     def __init__(self, ip, port,can_filters=None,**kwargs):
         super().__init__("whatever",can_filters)
         self.port = port
@@ -28,9 +28,12 @@ class TCPBus(can.BusABC):
 
         #open socket and wait for connection to establish.
         socket.setdefaulttimeout(3) # seconds
-        utils.log("attempting to connect to tcp")
-        self._conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
-        self._conn.connect((ip, port))
+        utils.log("attempting to connect to udp")
+        self._conn = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        self._conn.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        self._conn.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+
+        self._conn.bind(("", 5005))
         utils.log("connected")
         self._is_connected = True
         self._conn.settimeout(0.5) #blocking makes exiting an infinite loop hard
@@ -39,9 +42,9 @@ class TCPBus(can.BusABC):
         self._tcp_listener = Thread(target=self._poll_socket)
         self._tcp_listener.start()
 
-        self._tcp_writer = Thread(target=self._poll_send)
-        self._tcp_writer.start()
-    
+        # self._tcp_writer = Thread(target=self._poll_send)
+        # self._tcp_writer.start()
+
     def _recv_internal(self,timeout=None):
         #TODO: filtering
         try:
@@ -55,7 +58,7 @@ class TCPBus(can.BusABC):
         if msg.is_remote_frame:
             msg.arbitration_id |= self.CAN_RTR_FLAG
         if msg.is_error_frame:
-            msg.arbitration_id |= self.CAN_ERR_FLAG        
+            msg.arbitration_id |= self.CAN_ERR_FLAG
         self.send_buffer.put(msg)
 
     def _stop_threads(self):
@@ -100,7 +103,7 @@ class TCPBus(can.BusABC):
             arb_id = can_id & 0x1FFFFFFF
         else:
             arb_id = can_id & 0x000007FF
-        
+
         return can.Message(
             timestamp = ts,
             arbitration_id = arb_id,
@@ -127,14 +130,14 @@ class TCPBus(can.BusABC):
                 # socket's been closed.
                 utils.log_error(f"ERROR: connection closed (1): {e}")
                 self._stop_threads()
-                break                
+                break
 
             if len(data):
                 # process the 1 or more messages we just received
 
                 if len(part_formed_message):
                     data = part_formed_message + data #add on the previous remainder
-                
+
                 #check how many whole and incomplete messages we got through.
                 num_incomplete_bytes = len(data) % self.RECV_FRAME_SZ
                 num_frames = len(data) // self.RECV_FRAME_SZ
@@ -176,7 +179,3 @@ class TCPBus(can.BusABC):
             except QueueEmpty:
                 pass #NBD, just means nothing to send.
         # utils.log("Exited poll send")
-
-
-
-        
