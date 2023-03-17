@@ -60,12 +60,19 @@ class Main(QtWidgets.QMainWindow):
         self.ui.loadlbl.setStyleSheet("font:16px;")
         self.ui.eventTextEdit = QtWidgets.QLineEdit(text='Event')
         self.ui.eventButton = QtWidgets.QPushButton('Log Event')
+        self.ui.loginButton = QtWidgets.QPushButton('Write to Car')
+        self.ui.logoutButton = QtWidgets.QPushButton('Stop Writing to Car')
         self.ui.eventButton.setStyleSheet("border-color: black; border-style: outset; border-width: 2px;")
         self.ui.statusbar.addWidget(self.ui.comlbl)
         self.ui.statusbar.addWidget(self.ui.loadlbl)
         self.ui.statusbar.addWidget(self.ui.eventTextEdit)
         self.ui.statusbar.addWidget(self.ui.eventButton)
+        self.ui.statusbar.addWidget(self.ui.loginButton)
+        self.ui.statusbar.addWidget(self.ui.logoutButton)
+        self.ui.writelbl = QtWidgets.QLabel()
         self.ui.eventButton.clicked.connect(self.logEvent)
+        self.ui.loginButton.clicked.connect(self.loginEvent)
+        self.ui.logoutButton.clicked.connect(self.logoutEvent)
 
         # Menu Bar Tools
         self.ui.play_icon = self.style().standardIcon(getattr(QtWidgets.QStyle, 'SP_MediaPlay'))
@@ -125,7 +132,7 @@ class Main(QtWidgets.QMainWindow):
         self.ui.actionCharge_Viewer.triggered.connect(lambda _visible: self.viewWidget(_visible, self.ui.chargeViewer))
         self.ui.actionSensor_Viewer.triggered.connect(lambda _visible: self.viewWidget(_visible, self.ui.sensorViewer))
         self.ui.actionSystem_Monitor.triggered.connect(lambda _visible: self.viewWidget(_visible, self.ui.systemMonitor))
-        self.ui.actionFaultViewer.triggered.connect(lambda _visible: self.viewWidget(_visible, self.ui.faultViewer))
+        self.ui.actionFault_Viewer.triggered.connect(lambda _visible: self.viewWidget(_visible, self.ui.faultViewer))
         self.ui.actionLCD.triggered.connect(self.newLCD)
         self.ui.actionPlot.triggered.connect(self.newPlot)
         self.ui.actionRemoveWidget.triggered.connect(self.removeDisplayWidget)
@@ -314,6 +321,14 @@ class Main(QtWidgets.QMainWindow):
         """ Logs and event, recording the timestamp """
         t = time.time() - self.can_bus.start_time_cmp
         utils.logEvent(t, self.ui.eventTextEdit.text())
+
+    def loginEvent(self):
+        """ Attempts to connect to TCP server """
+        self.can_bus.connect_tcp()
+
+    def logoutEvent(self):
+        """Attempts to disconnect from TCP server"""
+
 
     def closeEvent(self, event):
         """ Called on exit of main window """

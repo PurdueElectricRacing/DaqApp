@@ -34,7 +34,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>21</height>
+     <height>24</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuHelp">
@@ -56,6 +56,7 @@
     <addaction name="actionCharge_Viewer"/>
     <addaction name="actionSensor_Viewer"/>
     <addaction name="actionSystem_Monitor"/>
+    <addaction name="actionFault_Viewer"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -217,6 +218,14 @@
    </property>
    <property name="text">
     <string>System Monitor</string>
+   </property>
+  </action>
+  <action name="actionFault_Viewer">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Fault Viewer</string>
    </property>
   </action>
  </widget>
