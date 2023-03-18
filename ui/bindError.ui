@@ -42,7 +42,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:18pt; font-weight:600; color:#fc0107;&quot;&gt;ERROR: &lt;/span&gt;&lt;span style=&quot; font-size:18pt; font-weight:600; color:#fc0107;&quot;&gt;Write mode is already in use by another user:&lt;/span&gt;&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;Please exit write mode on all users and try again.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:18pt; font-weight:600; color:#fc0107;&quot;&gt;ERROR: Unable To Connect to Socket:&lt;/span&gt;&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;Please exit write mode on all users and ensure the Raspberry Pi is functional.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </widget>
  </widget>

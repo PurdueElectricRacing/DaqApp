@@ -34,4 +34,4 @@ class Ui_Dialog(object):
         _translate = QtCore.QCoreApplication.translate
         Dialog.setWindowTitle(_translate("Dialog", "Dialog"))
         self.dismiss.setText(_translate("Dialog", "Dismiss"))
-        self.label.setText(_translate("Dialog", "<html><head/><body><p><span style=\" font-size:18pt; font-weight:600; color:#fc0107;\">ERROR: </span><span style=\" font-size:18pt; font-weight:600; color:#fc0107;\">Write mode is already in use by another user:</span></p><p align=\"center\">Please exit write mode on all users and try again.</p></body></html>"))
+        self.label.setText(_translate("Dialog", "<html><head/><body><p align=\"center\"><span style=\" font-size:18pt; font-weight:600; color:#fc0107;\">ERROR: Unable To Connect to Socket:</span></p><p align=\"center\">Please exit write mode on all users and ensure the Raspberry Pi is functional.</p></body></html>"))

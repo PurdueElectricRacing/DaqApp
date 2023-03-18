@@ -90,6 +90,9 @@ class TCPBus(can.BusABC):
             sleep(0.005)
         self._conn.close() #shutdown might be faster but can be ugly and raise an exception
 
+    def close(self):
+        self._conn.close()
+
     @property
     def is_connected(self):
         """check that a TCP connection is active"""
@@ -211,8 +214,7 @@ class UDPBus(can.BusABC):
         utils.log("attempting to connect to udp")
         self._conn = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
 
-        # self._conn.bind(("", 5005))
-        self._conn.connect(("", 5005))
+        self._conn.bind(("", 5005))
         utils.log("Listening to UDP Port")
         self._is_connected = True
         self._conn.settimeout(0.5) #blocking makes exiting an infinite loop hard

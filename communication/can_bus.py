@@ -24,6 +24,7 @@ class CanBus(QtCore.QThread):
     """
 
     connect_sig = QtCore.pyqtSignal(bool)
+    write_sig = QtCore.pyqtSignal(int)
     bus_load_sig = QtCore.pyqtSignal(float)
     new_msg_sig = QtCore.pyqtSignal(can.Message)
     bl_msg_sig = QtCore.pyqtSignal(can.Message)
@@ -121,6 +122,8 @@ class CanBus(QtCore.QThread):
     def connect_tcp(self):
         # Usb failed, trying tcp
         utils.log("Trying tcp")
+        self.conected = 1
+        self.write_sig.emit(self.connected)
         try:
             self.tcpbus = TCPBus(self.ip, self.port)
             self.connected_tcp = True
@@ -133,6 +136,7 @@ class CanBus(QtCore.QThread):
             utils.log("Tcp successful")
             self.password = PasswordDialog.promptPassword(self.password)
             print(self.password)
+            result = True
             if self.password == "":
                 result = False
             elif self.password == None:
@@ -144,16 +148,25 @@ class CanBus(QtCore.QThread):
                 self.password = None
                 self.password = PasswordDialog.setText(self.password)
                 if self.password == "":
-                    continue
+                    result = False
                 elif self.password == None:
                     self.tcpbus.shutdown(0)
                     result = True
                 else:
                     result = self.tcpbus.handshake(self.password)
             # self.connect_sig.emit(self.connected)
+            self.connected = 2
+            self.write_sig.emit(self.connected)
+            return
+        except socket.timeout as e:
+            self.connected = 0
+            self.write_sig.emit(self.connected)
+            utils.log_error(e)
+            BindError.bindError()
+            self.tcpbus.close()
             return
         except Exception as e:
-            utils.log(f"Socket error: {e}")
+            utils.log(f"Unknown Error: {e}")
         # except OSError as e:
         #     utils.log(f"tcp connect error {e}")
 
@@ -162,6 +175,9 @@ class CanBus(QtCore.QThread):
         utils.log_error("Failed to connect to the TCP")
         # self.connect_sig.emit(self.connected)
         # BindError.bindError()
+        self.connectError()
+        self.connected = 0
+        self.write_sig.emit(self.connected)
 
 
 
@@ -245,7 +261,7 @@ class CanBus(QtCore.QThread):
         """ Creates message box prompting to try to reconnect """
         self.ip = ConnectionErrorDialog.connectionError(self.ip)
         if self.ip:
-            self.connect()
+            self.connect_tcp()
 
 
     def updateSignals(self, can_config: dict):
