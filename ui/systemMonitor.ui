@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>731</width>
-    <height>524</height>
+    <width>865</width>
+    <height>318</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,7 +18,7 @@
     <widget class="QGroupBox" name="groupBox_2">
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
+       <pointsize>10</pointsize>
        <weight>75</weight>
        <bold>true</bold>
       </font>
@@ -31,7 +31,7 @@
        <widget class="QGroupBox" name="groupBox">
         <property name="font">
          <font>
-          <pointsize>12</pointsize>
+          <pointsize>10</pointsize>
           <weight>50</weight>
           <bold>false</bold>
          </font>
@@ -44,7 +44,7 @@
           <widget class="CANVariableDisplay" name="label_4">
            <property name="font">
             <font>
-             <pointsize>12</pointsize>
+             <pointsize>10</pointsize>
             </font>
            </property>
            <property name="text">
@@ -56,7 +56,7 @@
           <widget class="CANVariableDisplay" name="label_9">
            <property name="font">
             <font>
-             <pointsize>12</pointsize>
+             <pointsize>10</pointsize>
             </font>
            </property>
            <property name="text">
@@ -68,7 +68,7 @@
           <widget class="CANVariableDisplay" name="label_5">
            <property name="font">
             <font>
-             <pointsize>12</pointsize>
+             <pointsize>10</pointsize>
             </font>
            </property>
            <property name="text">
@@ -80,7 +80,7 @@
           <widget class="CANVariableDisplay" name="label_6">
            <property name="font">
             <font>
-             <pointsize>12</pointsize>
+             <pointsize>10</pointsize>
             </font>
            </property>
            <property name="text">
@@ -92,7 +92,7 @@
           <widget class="CANVariableDisplay" name="label_10">
            <property name="font">
             <font>
-             <pointsize>12</pointsize>
+             <pointsize>10</pointsize>
             </font>
            </property>
            <property name="text">
@@ -104,7 +104,7 @@
           <widget class="CANVariableDisplay" name="label_7">
            <property name="font">
             <font>
-             <pointsize>12</pointsize>
+             <pointsize>10</pointsize>
             </font>
            </property>
            <property name="text">
@@ -116,7 +116,7 @@
           <widget class="CANVariableDisplay" name="label_8">
            <property name="font">
             <font>
-             <pointsize>12</pointsize>
+             <pointsize>10</pointsize>
             </font>
            </property>
            <property name="text">
@@ -143,7 +143,7 @@
           <widget class="CANVariableDisplay" name="label_11">
            <property name="font">
             <font>
-             <pointsize>12</pointsize>
+             <pointsize>10</pointsize>
             </font>
            </property>
            <property name="text">
@@ -155,7 +155,7 @@
           <widget class="CANVariableDisplay" name="label_14">
            <property name="font">
             <font>
-             <pointsize>12</pointsize>
+             <pointsize>10</pointsize>
             </font>
            </property>
            <property name="text">
@@ -167,7 +167,7 @@
           <widget class="CANVariableDisplay" name="label_12">
            <property name="font">
             <font>
-             <pointsize>12</pointsize>
+             <pointsize>10</pointsize>
             </font>
            </property>
            <property name="text">
@@ -179,7 +179,7 @@
           <widget class="CANVariableDisplay" name="label_13">
            <property name="font">
             <font>
-             <pointsize>12</pointsize>
+             <pointsize>10</pointsize>
             </font>
            </property>
            <property name="text">
@@ -191,7 +191,7 @@
           <widget class="CANVariableDisplay" name="label_15">
            <property name="font">
             <font>
-             <pointsize>12</pointsize>
+             <pointsize>10</pointsize>
             </font>
            </property>
            <property name="text">
@@ -209,7 +209,7 @@
     <widget class="QGroupBox" name="groupBox_4">
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
+       <pointsize>10</pointsize>
        <weight>75</weight>
        <bold>true</bold>
       </font>
@@ -223,7 +223,7 @@
     <widget class="QGroupBox" name="groupBox_5">
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
+       <pointsize>10</pointsize>
        <weight>75</weight>
        <bold>true</bold>
       </font>

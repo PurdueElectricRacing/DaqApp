@@ -1,11 +1,13 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
 from accessory_widgets.bootloader.bootloader import Bootloader
 from accessory_widgets.frame_viewer import FrameViewer
+from accessory_widgets.car_viewer import CarViewer
 from accessory_widgets.cell_viewer import CellViewer
 from accessory_widgets.charge_viewer import ChargeViewer
 from accessory_widgets.faultViewer import FaultViewer
 from accessory_widgets.log_export import LogExporter
 from accessory_widgets.log_import import LogImporter
+from accessory_widgets.motor_viewer import MotorViewer
 from accessory_widgets.preferences_editor import PreferencesEditor
 from accessory_widgets.variable_editor import VariableEditor
 from accessory_widgets.file_viewer import FileViewer
@@ -96,6 +98,8 @@ class Main(QtWidgets.QMainWindow):
         self.ui.faultViewer = FaultViewer(self.can_bus, self.fault_config, self.daq_protocol)
         self.ui.sensorViewer = SensorViewer(self.can_bus)
         self.ui.systemMonitor = SystemMonitor(self.can_bus)
+        self.ui.motorViewer = MotorViewer(self.can_bus)
+        self.ui.carViewer = CarViewer(self.can_bus)
 
         # Dashboard Layout
         self.ui.dashboardLayout = QtWidgets.QGridLayout()
@@ -125,7 +129,9 @@ class Main(QtWidgets.QMainWindow):
         self.ui.actionCharge_Viewer.triggered.connect(lambda _visible: self.viewWidget(_visible, self.ui.chargeViewer))
         self.ui.actionSensor_Viewer.triggered.connect(lambda _visible: self.viewWidget(_visible, self.ui.sensorViewer))
         self.ui.actionSystem_Monitor.triggered.connect(lambda _visible: self.viewWidget(_visible, self.ui.systemMonitor))
-        self.ui.actionFaultViewer.triggered.connect(lambda _visible: self.viewWidget(_visible, self.ui.faultViewer))
+        self.ui.actionFault_Viewer.triggered.connect(lambda _visible: self.viewWidget(_visible, self.ui.faultViewer))
+        self.ui.actionMotor_Viewer.triggered.connect(lambda _visible: self.viewWidget(_visible, self.ui.motorViewer))
+        self.ui.actionCar_Viewer.triggered.connect(lambda _visible: self.viewWidget(_visible, self.ui.carViewer))
         self.ui.actionLCD.triggered.connect(self.newLCD)
         self.ui.actionPlot.triggered.connect(self.newPlot)
         self.ui.actionRemoveWidget.triggered.connect(self.removeDisplayWidget)
