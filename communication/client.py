@@ -188,6 +188,7 @@ class TCPBus(can.BusABC):
                     data += self._msg_to_bytes(self.send_buffer.get())
                 try:
                     s.sendall(data)
+                    print("sent\n\n\n\n\n\n\n\n\n\n\n\n\n")
                 except OSError as e:
                     # socket's been closed.
                     utils.log_error(f"ERROR: connection closed (3): {e}")

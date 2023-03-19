@@ -40,6 +40,7 @@ class CanBus(QtCore.QThread):
         self.bus = None
         self.start_time_bus = -1
         self.start_date_time_str = ""
+        self.tcp = False
 
         # Bus Load Estimation
         self.total_bits = 0
@@ -157,6 +158,7 @@ class CanBus(QtCore.QThread):
             # self.connect_sig.emit(self.connected)
             self.connected = 2
             self.write_sig.emit(self.connected)
+            self.tcp = True
             return
         except socket.timeout as e:
             self.connected = 0
@@ -210,12 +212,18 @@ class CanBus(QtCore.QThread):
         dbc_msg = self.db.get_message_by_name(msg_name)
         data = dbc_msg.encode(msg_data)
         msg = can.Message(arbitration_id=dbc_msg.frame_id, data=data, is_extended_id=True)
-        self.bus.send(msg)
+        if self.tcp:
+            self.tcpbus.send(msg)
+        else:
+            self.bus.send(msg)
 
     def sendMsg(self, msg: can.Message):
         """ Sends a can message over the bus """
         if self.connected:
-            self.bus.send(msg)
+            if self.tcp:
+                self.tcpbus.send(msg)
+            else:
+                self.bus.send(msg)
         else:
             utils.log_error("Tried to send msg without connection")
 
