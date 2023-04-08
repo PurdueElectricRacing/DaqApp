@@ -53,8 +53,8 @@ class CanBus(QtCore.QThread):
         self.is_importing = False
 
         self.port = 8080
-        # self.ip = default_ip
-        self.ip = "10.42.0.1"
+        self.ip = default_ip
+        #self.ip = "10.42.0.1"
         self.password = None
         self.is_wireless = False
 
