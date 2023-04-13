@@ -226,7 +226,7 @@ class UDPBus(can.BusABC):
 
     def _bytes_to_message(self,b):
         """convert raw TCP bytes to can.Message object"""
-        #ts = int.from_bytes(b[:4],"little") + int.from_bytes(b[4:8],"little")/1e6
+        #ts = int.from_bytes(b[:4],"little") + int.from_bytes(b[4:8],"little")/ e6
         ts = int.from_bytes(b[:8],"little") + int.from_bytes(b[8:16],"little")/1e6
         #print(f"len: {len(b)}, time: {ts}, data: {b}")
         #can_id = int.from_bytes(b[8:12],"little")
