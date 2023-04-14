@@ -207,6 +207,10 @@ class CanBus(QtCore.QThread):
         self.start_date_time_str = datetime.now().strftime("%m-%d-%Y %H:%M:%S")
         self.start()
 
+    def sendLogStart(self):
+        """Send the start logging function"""
+        self.tcpbus.start_logging()
+
     def sendFormatMsg(self, msg_name, msg_data: dict):
         """ Sends a message using a dictionary of its data """
         dbc_msg = self.db.get_message_by_name(msg_name)

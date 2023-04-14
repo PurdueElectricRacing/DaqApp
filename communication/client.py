@@ -69,7 +69,12 @@ class TCPBus(can.BusABC):
             msg.arbitration_id |= self.CAN_RTR_FLAG
         if msg.is_error_frame:
             msg.arbitration_id |= self.CAN_ERR_FLAG
+        self.send_buffer.put(0)
         self.send_buffer.put(msg)
+
+    def start_logging(self):
+        self.send_buffer.put(1)
+        self.send_buffer.put(0xFFFFFFFF)
 
     def _stop_threads(self):
         #self._shutdown_flag.put(True)
@@ -182,9 +187,13 @@ class TCPBus(can.BusABC):
         s = self._conn
         while not self._shutdown_flag: #self._shutdown_flag.empty():
             try:
+                print("here")
+                cmd = self.send_buffer.get(timeout=0.002).to_bytes(1,"little")
                 msg = self.send_buffer.get(timeout=0.002)
-                data = self._msg_to_bytes(msg)
+                data = cmd
+                data += self._msg_to_bytes(msg)
                 while not self.send_buffer.empty(): #we know there's one message, might be more.
+                    data += self.send_buffer.get().to_bytes(1,"little")
                     data += self._msg_to_bytes(self.send_buffer.get())
                 try:
                     s.sendall(data)

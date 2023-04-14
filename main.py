@@ -63,6 +63,7 @@ class Main(QtWidgets.QMainWindow):
         self.ui.eventButton = QtWidgets.QPushButton('Log Event')
         self.ui.loginButton = QtWidgets.QPushButton('Write to Car')
         self.ui.logoutButton = QtWidgets.QPushButton('Stop Writing to Car')
+        self.ui.logEnableBtn = QtWidgets.QPushButton('Start Logging')
         self.ui.eventButton.setStyleSheet("border-color: black; border-style: outset; border-width: 2px;")
         self.ui.writelbl = QtWidgets.QLabel()
         self.ui.statusbar.addWidget(self.ui.comlbl)
@@ -72,9 +73,11 @@ class Main(QtWidgets.QMainWindow):
         self.ui.statusbar.addWidget(self.ui.loginButton)
         self.ui.statusbar.addWidget(self.ui.logoutButton)
         self.ui.statusbar.addWidget(self.ui.writelbl)
+        self.ui.statusbar.addWidget(self.ui.logEnableBtn)
         self.ui.eventButton.clicked.connect(self.logEvent)
         self.ui.loginButton.clicked.connect(self.loginEvent)
         self.ui.logoutButton.clicked.connect(self.logoutEvent)
+        self.ui.logEnableBtn.clicked.connect(self.logEvent)
 
         # Menu Bar Tools
         self.ui.play_icon = self.style().standardIcon(getattr(QtWidgets.QStyle, 'SP_MediaPlay'))
@@ -345,6 +348,10 @@ class Main(QtWidgets.QMainWindow):
 
     def logoutEvent(self):
         """Attempts to disconnect from TCP server"""
+
+    def logEvent(self):
+        """Attempts to start PI Logger"""
+        self.can_bus.sendLogStart()
 
 
     def closeEvent(self, event):
