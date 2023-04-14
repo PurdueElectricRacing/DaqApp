@@ -53,6 +53,7 @@ class Main(QtWidgets.QMainWindow):
         # Can Bus Initialization
         self.can_bus = CanBus(config['dbc_path'], config['default_ip'], self.can_config)
         self.can_bus.connect_sig.connect(self.updateConnectionStatus)
+        self.can_bus.write_sig.connect(self.updateWriteConnectionStatus)
         self.can_bus.bus_load_sig.connect(self.updateBusLoad)
         self.daq_protocol = DaqProtocol(self.can_bus, self.daq_config)
 
@@ -62,12 +63,23 @@ class Main(QtWidgets.QMainWindow):
         self.ui.loadlbl.setStyleSheet("font:16px;")
         self.ui.eventTextEdit = QtWidgets.QLineEdit(text='Event')
         self.ui.eventButton = QtWidgets.QPushButton('Log Event')
+        self.ui.loginButton = QtWidgets.QPushButton('Write to Car')
+        self.ui.logoutButton = QtWidgets.QPushButton('Stop Writing to Car')
+        self.ui.logEnableBtn = QtWidgets.QPushButton('Start Logging')
         self.ui.eventButton.setStyleSheet("border-color: black; border-style: outset; border-width: 2px;")
+        self.ui.writelbl = QtWidgets.QLabel()
         self.ui.statusbar.addWidget(self.ui.comlbl)
         self.ui.statusbar.addWidget(self.ui.loadlbl)
         self.ui.statusbar.addWidget(self.ui.eventTextEdit)
         self.ui.statusbar.addWidget(self.ui.eventButton)
+        self.ui.statusbar.addWidget(self.ui.loginButton)
+        self.ui.statusbar.addWidget(self.ui.logoutButton)
+        self.ui.statusbar.addWidget(self.ui.writelbl)
+        self.ui.statusbar.addWidget(self.ui.logEnableBtn)
         self.ui.eventButton.clicked.connect(self.logEvent)
+        self.ui.loginButton.clicked.connect(self.loginEvent)
+        self.ui.logoutButton.clicked.connect(self.logoutEvent)
+        self.ui.logEnableBtn.clicked.connect(self.logEvent)
 
         # Menu Bar Tools
         self.ui.play_icon = self.style().standardIcon(getattr(QtWidgets.QStyle, 'SP_MediaPlay'))
@@ -144,6 +156,7 @@ class Main(QtWidgets.QMainWindow):
         self.ui.actionAbout.triggered.connect(lambda: webbrowser.open(
                             'https://wiki.itap.purdue.edu/display/PER22/Data+Acquisition'))
 
+        self.updateWriteConnectionStatus(0)
         self.can_bus.connect()
         self.can_bus.start()
         # self.can_bus.reconnect()
@@ -159,6 +172,20 @@ class Main(QtWidgets.QMainWindow):
             self.ui.comlbl.setText("Disconnected")
         self.ui.varEdit.setDisabled(not connected)
         self.ui.frameViewer.setDisabled(not connected)
+
+    def updateWriteConnectionStatus(self, connected: int):
+        """ Updates the connection status label when connect status changes """
+        if connected == 2:
+            self.ui.writelbl.setStyleSheet("color: green; font: 18px bold;")
+            self.ui.writelbl.setText("Connected")
+        elif connected == 1:
+            self.ui.writelbl.setStyleSheet("color: yellow; font: 18px bold;")
+            self.ui.writelbl.setText("Connecting...")
+        else:
+            self.ui.writelbl.setStyleSheet("color: red; font: 18px bold;")
+            self.ui.writelbl.setText("Disconnected")
+
+
 
     def updateBusLoad(self, load: float):
         """ Updates the bus load label """
@@ -320,6 +347,19 @@ class Main(QtWidgets.QMainWindow):
         """ Logs and event, recording the timestamp """
         t = time.time() - self.can_bus.start_time_cmp
         utils.logEvent(t, self.ui.eventTextEdit.text())
+
+    def loginEvent(self):
+        """ Attempts to connect to TCP server """
+        self.can_bus.connect_tcp()
+
+    def logoutEvent(self):
+        """Attempts to disconnect from TCP server"""
+        self.can_bus.disconnect_tcp()
+
+    def logEvent(self):
+        """Attempts to start PI Logger"""
+        self.can_bus.sendLogStart()
+
 
     def closeEvent(self, event):
         """ Called on exit of main window """

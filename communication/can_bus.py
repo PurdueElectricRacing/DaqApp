@@ -3,10 +3,13 @@ from datetime import datetime
 import can
 import can.interfaces.gs_usb
 import gs_usb
+import socket
 import usb
 import cantools
-from communication.client import TCPBus
+from communication.client import TCPBus, UDPBus
 from communication.connection_error_dialog import ConnectionErrorDialog
+from communication.bind_error import BindError
+from communication.password_dialog import PasswordDialog
 import utils
 import time
 import threading
@@ -16,11 +19,12 @@ import math
 
 class CanBus(QtCore.QThread):
     """
-    Handles sending and receiving can bus messages, 
+    Handles sending and receiving can bus messages,
     tracks all degined signals (BusSignal)
     """
 
     connect_sig = QtCore.pyqtSignal(bool)
+    write_sig = QtCore.pyqtSignal(int)
     bus_load_sig = QtCore.pyqtSignal(float)
     new_msg_sig = QtCore.pyqtSignal(can.Message)
     bl_msg_sig = QtCore.pyqtSignal(can.Message)
@@ -36,6 +40,7 @@ class CanBus(QtCore.QThread):
         self.bus = None
         self.start_time_bus = -1
         self.start_date_time_str = ""
+        self.tcp = False
 
         # Bus Load Estimation
         self.total_bits = 0
@@ -47,11 +52,13 @@ class CanBus(QtCore.QThread):
 
         self.is_importing = False
 
-        self.port = 8081
+        self.port = 8080
         self.ip = default_ip
+        #self.ip = "10.42.0.1"
+        self.password = None
         self.is_wireless = False
 
-    
+
     def connect(self):
         """ Connects to the bus """
         utils.log("Trying usb")
@@ -71,28 +78,110 @@ class CanBus(QtCore.QThread):
             utils.log("Usb successful")
             return
 
-        # Usb failed, trying tcp
-        utils.log("Trying tcp")
+        #USB Failed, trying UDP
+        utils.log("Trying UDP")
         try:
-            self.bus = TCPBus(self.ip, self.port)
+            self.bus = UDPBus(self.ip, self.port)
             self.connected = True
             self.is_wireless = True
             # Empty buffer of old messages
             time.sleep(3)
             i=0
-            while(self.bus.recv(0)): 
+            while(self.bus.recv(0)):
                 i+=1
             utils.log(f"cleared {i} from buffer")
-            utils.log("Tcp successful")
+            utils.log_warning("This does not gurantee a connection. Please make sure Raspberry Pi is broadcasting.")
             self.connect_sig.emit(self.connected)
             return
         except OSError as e:
-            utils.log(f"tcp connect error {e}")
+            utils.log(f"UDP connect error {e}")
 
+        # Usb failed, trying tcp
+        # utils.log("Trying tcp")
+        # try:
+        #     self.bus = TCPBus(self.ip, self.port)
+        #     self.connected = True
+        #     self.is_wireless = True
+        #     # Empty buffer of old messages
+        #     time.sleep(3)
+        #     i=0
+        #     while(self.bus.recv(0)):
+        #         i+=1
+        #     utils.log(f"cleared {i} from buffer")
+        #     utils.log("Tcp successful")
+        #     self.connect_sig.emit(self.connected)
+        #     return
+        # except OSError as e:
+        #     utils.log(f"tcp connect error {e}")
+
+        #Both Connections Failed
         self.connected = False
         utils.log_error("Failed to connect to a bus")
         self.connect_sig.emit(self.connected)
         self.connectError()
+
+    def connect_tcp(self):
+        # Usb failed, trying tcp
+        utils.log("Trying tcp")
+        self.conected = 1
+        self.write_sig.emit(self.connected)
+        try:
+            self.tcpbus = TCPBus(self.ip, self.port)
+            self.connected_tcp = True
+            # Empty buffer of old messages
+            time.sleep(3)
+            i=0
+            while(self.tcpbus.recv(0)):
+                i+=1
+            utils.log(f"cleared {i} from buffer")
+            utils.log("Tcp successful")
+            self.password = PasswordDialog.promptPassword(self.password)
+            print(self.password)
+            result = True
+            if self.password == "":
+                result = False
+            elif self.password == None:
+                self.tcpbus.shutdown(0)
+                result = True
+            else:
+                result = self.tcpbus.handshake(self.password)
+            while not result:
+                self.password = None
+                self.password = PasswordDialog.setText(self.password)
+                if self.password == "":
+                    result = False
+                elif self.password == None:
+                    self.tcpbus.shutdown(0)
+                    result = True
+                else:
+                    result = self.tcpbus.handshake(self.password)
+            # self.connect_sig.emit(self.connected)
+            self.connected = 2
+            self.write_sig.emit(self.connected)
+            self.tcp = True
+            return
+        except socket.timeout as e:
+            self.connected = 0
+            self.write_sig.emit(self.connected)
+            utils.log_error(e)
+            BindError.bindError()
+            self.tcpbus.close()
+            return
+        except Exception as e:
+            utils.log(f"Unknown Error: {e}")
+        # except OSError as e:
+        #     utils.log(f"tcp connect error {e}")
+
+        #TCP Connection is in Bind State
+        # self.connected = False
+        utils.log_error("Failed to connect to the TCP")
+        # self.connect_sig.emit(self.connected)
+        # BindError.bindError()
+        self.connectError()
+        self.connected = 0
+        self.write_sig.emit(self.connected)
+
+
 
     def disconnect_bus(self):
         self.connected = False
@@ -102,6 +191,13 @@ class CanBus(QtCore.QThread):
             if not self.is_wireless: usb.util.dispose_resources(self.bus.gs_usb.gs_usb)
             del(self.bus)
             self.bus = None
+    def disconnect_tcp(self):
+        self.connected = False
+        self.write_sig.emit(self.connected)
+        if self.tcpbus:
+            self.tcpbus.shutdown()
+            del(self.tcpbus)
+            self.tcpbus = None
 
     def reconnect(self):
         """ destroy usb connection, attempt to reconnect """
@@ -117,24 +213,34 @@ class CanBus(QtCore.QThread):
         self.start_time_cmp = 0
         self.start_date_time_str = datetime.now().strftime("%m-%d-%Y %H:%M:%S")
         self.start()
-    
+
+    def sendLogStart(self):
+        """Send the start logging function"""
+        self.tcpbus.start_logging()
+
     def sendFormatMsg(self, msg_name, msg_data: dict):
         """ Sends a message using a dictionary of its data """
         dbc_msg = self.db.get_message_by_name(msg_name)
         data = dbc_msg.encode(msg_data)
         msg = can.Message(arbitration_id=dbc_msg.frame_id, data=data, is_extended_id=True)
-        self.bus.send(msg)
-    
+        if self.tcp:
+            self.tcpbus.send(msg)
+        else:
+            self.bus.send(msg)
+
     def sendMsg(self, msg: can.Message):
         """ Sends a can message over the bus """
         if self.connected:
-            self.bus.send(msg)
+            if self.tcp:
+                self.tcpbus.send(msg)
+            else:
+                self.bus.send(msg)
         else:
             utils.log_error("Tried to send msg without connection")
-    
+
     def onMessageReceived(self, msg: can.Message):
         """ Emits new message signal and updates the corresponding signals """
-        if self.start_time_bus == -1: 
+        if self.start_time_bus == -1:
             self.start_time_bus = msg.timestamp
             self.start_time_cmp = time.time()
             self.start_date_time_str = datetime.now().strftime("%m-%d-%Y %H:%M:%S")
@@ -163,7 +269,7 @@ class CanBus(QtCore.QThread):
         #     utils.log(msg)
 
         # bus load estimation
-        msg_bit_length_max = 64 + msg.dlc * 8 + 18 
+        msg_bit_length_max = 64 + msg.dlc * 8 + 18
         self.total_bits += msg_bit_length_max
 
     def pause(self, pause: bool):
@@ -174,7 +280,7 @@ class CanBus(QtCore.QThread):
         """ Creates message box prompting to try to reconnect """
         self.ip = ConnectionErrorDialog.connectionError(self.ip)
         if self.ip:
-            self.connect()
+            self.connect_tcp()
 
 
     def updateSignals(self, can_config: dict):
@@ -199,7 +305,7 @@ class CanBus(QtCore.QThread):
         avg_process_time = 0
 
         #while self.connected:
-        while (not self.is_wireless or self.bus and self.bus.is_connected) and self.connected:
+        while (not self.is_wireless or self.bus and self.bus._is_connected) and self.connected:
             # TODO: detect when not connected (add with catching send error)
             #       would the connected variable need to be locked?
             msg = self.bus.recv(0.25)
@@ -222,7 +328,7 @@ class CanBus(QtCore.QThread):
                 loop_count = 0
                 avg_process_time = 0
                 skips = 0
-        #self.connect_sig.emit(self.connected and self.bus.is_connected) 
+        #self.connect_sig.emit(self.connected and self.bus.is_connected)
         if (self.connected and self.is_wireless): self.connect_sig.emit(self.bus and self.bus.is_connected)
 
 
@@ -307,7 +413,7 @@ class BusSignal(QtCore.QObject):
         """ timestamp of last value recorded """
         with self.data_lock:
             return self.times[self.curr_idx]
-    
+
     @property
     def length(self):
         """ number of recorded values """
