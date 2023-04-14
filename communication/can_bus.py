@@ -191,6 +191,13 @@ class CanBus(QtCore.QThread):
             if not self.is_wireless: usb.util.dispose_resources(self.bus.gs_usb.gs_usb)
             del(self.bus)
             self.bus = None
+    def disconnect_tcp(self):
+        self.connected = False
+        self.write_sig.emit(self.connected)
+        if self.tcpbus:
+            self.tcpbus.shutdown()
+            del(self.tcpbus)
+            self.tcpbus = None
 
     def reconnect(self):
         """ destroy usb connection, attempt to reconnect """

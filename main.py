@@ -348,6 +348,7 @@ class Main(QtWidgets.QMainWindow):
 
     def logoutEvent(self):
         """Attempts to disconnect from TCP server"""
+        self.can_bus.disconnect_tcp()
 
     def logEvent(self):
         """Attempts to start PI Logger"""
