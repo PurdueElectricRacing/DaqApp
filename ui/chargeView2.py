@@ -14,7 +14,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_chargeViewer(object):
     def setupUi(self, chargeViewer):
         chargeViewer.setObjectName("chargeViewer")
-        chargeViewer.resize(915, 622)
+        chargeViewer.resize(766, 622)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)

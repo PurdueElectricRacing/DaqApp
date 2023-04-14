@@ -101,6 +101,7 @@ class DAQVariableDisplay(VariableDisplay):
         self.read_timer.stop()
         self.read_in_progress = False
         self.setValue("Stale")
+        utils.log_error("READ TIMEOUT "+str(self.sig.signal_name))
 
     def updatePeriodic(self):
         if not self.sig: return
@@ -115,6 +116,7 @@ class DAQVariableDisplay(VariableDisplay):
             self.read_timer.start(DAQ_READ_TIMEOUT_MS)
             self.read_in_progress = True
             utils.daqProt.readVar(self.sig)
+            utils.log_error("READING VAR "+str(self.sig.signal_name))
 
         if (self.sig.isDirty()): self.ui.Value.setStyleSheet("background:rgb(255, 255, 127);\n")
         else: self.ui.Value.setStyleSheet("background:rgb(255, 255, 255);\n")

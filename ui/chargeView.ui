@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>915</width>
+    <width>1484</width>
     <height>622</height>
    </rect>
   </property>
@@ -22,82 +22,457 @@
   <property name="toolTip">
    <string extracomment="A "/>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
+  <layout class="QHBoxLayout" name="horizontalLayout">
    <item>
-    <widget class="QLabel" name="label">
+    <widget class="QGroupBox" name="groupBox_4">
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
-       <weight>75</weight>
-       <bold>true</bold>
+       <weight>50</weight>
+       <bold>false</bold>
       </font>
      </property>
-     <property name="text">
-      <string>Test Node</string>
+     <property name="title">
+      <string>Charge Control</string>
      </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_4">
+      <item>
+       <widget class="DAQVariableDisplay" name="label_17">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Precharge.daq_response_PRECHARGE.charge_request_user</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="DAQVariableDisplay" name="label_18">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Precharge.daq_response_PRECHARGE.user_charge_current_request</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="DAQVariableDisplay" name="label_19">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Precharge.daq_response_PRECHARGE.user_charge_voltage_request</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="verticalSpacer_2">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>40</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
     </widget>
    </item>
    <item>
-    <widget class="DAQVariableDisplay" name="label_2">
+    <widget class="QGroupBox" name="groupBox_3">
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
+       <weight>50</weight>
+       <bold>false</bold>
       </font>
      </property>
-     <property name="text">
-      <string>TEST_NODE.daq_response_TEST_NODE.test_var2</string>
+     <property name="title">
+      <string>Charge Status</string>
      </property>
+     <layout class="QVBoxLayout" name="verticalLayout_3">
+      <item>
+       <widget class="CANVariableDisplay" name="label_31">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Precharge.precharge_hb.BMS</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="CANVariableDisplay" name="label_30">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Precharge.precharge_hb.IMD</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="CANVariableDisplay" name="label_14">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Precharge.pack_charge_status.charge_enable</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="CANVariableDisplay" name="label_11">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Precharge.pack_charge_status.power</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="CANVariableDisplay" name="label_15">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Precharge.pack_charge_status.voltage</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="CANVariableDisplay" name="label_16">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Precharge.pack_charge_status.current</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="verticalSpacer">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>40</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
     </widget>
    </item>
    <item>
-    <widget class="DAQVariableDisplay" name="label_3">
+    <widget class="QGroupBox" name="groupBox_5">
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
+       <weight>50</weight>
+       <bold>false</bold>
       </font>
      </property>
-     <property name="text">
-      <string>TEST_NODE.daq_response_TEST_NODE.green_on</string>
+     <property name="title">
+      <string>Orion Status</string>
      </property>
+     <layout class="QVBoxLayout" name="verticalLayout_5">
+      <item>
+       <widget class="CANVariableDisplay" name="label_20">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>OrionBMS.orion_info.dtc_status</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="CANVariableDisplay" name="label_23">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>OrionBMS.orion_currents_volts.pack_voltage</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="CANVariableDisplay" name="label_24">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>OrionBMS.orion_currents_volts.pack_current</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="CANVariableDisplay" name="label_12">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>OrionBMS.orion_info.pack_dcl</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="CANVariableDisplay" name="label_21">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>OrionBMS.orion_info.pack_ccl</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="CANVariableDisplay" name="label_22">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>OrionBMS.orion_info.pack_soc</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="verticalSpacer_3">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>40</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
     </widget>
    </item>
    <item>
-    <widget class="CANVariableDisplay" name="label_4">
+    <widget class="QGroupBox" name="groupBox_6">
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
+       <weight>50</weight>
+       <bold>false</bold>
       </font>
      </property>
-     <property name="text">
-      <string>TEST_NODE.test_msg2.test_sig2</string>
+     <property name="title">
+      <string>Elcon Status</string>
      </property>
+     <layout class="QVBoxLayout" name="verticalLayout_6">
+      <item>
+       <widget class="CANVariableDisplay" name="label_25">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Charger.elcon_charger_status.charge_voltage</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="CANVariableDisplay" name="label_26">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Charger.elcon_charger_status.charge_current</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="CANVariableDisplay" name="label_27">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Charger.elcon_charger_status.startup_fail</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="CANVariableDisplay" name="label_13">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Charger.elcon_charger_status.hw_fail</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="CANVariableDisplay" name="label_28">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Charger.elcon_charger_status.temp_fail</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="CANVariableDisplay" name="label_29">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Charger.elcon_charger_status.input_v_fail</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="verticalSpacer_4">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>40</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
     </widget>
    </item>
    <item>
-    <widget class="DAQVariableDisplay" name="label_5">
+    <widget class="QGroupBox" name="groupBox_7">
      <property name="font">
       <font>
-       <pointsize>12</pointsize>
+       <weight>50</weight>
+       <bold>false</bold>
       </font>
      </property>
-     <property name="text">
-      <string>TEST_NODE.daq_response_TEST_NODE.trim</string>
+     <property name="title">
+      <string>TMU</string>
      </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="DAQVariableDisplay" name="label_6">
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>TEST_NODE.daq_response_TEST_NODE.charge_voltage</string>
-     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_7">
+      <item>
+       <widget class="CANVariableDisplay" name="label_32">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Precharge.max_cell_temp.max_temp</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="CANVariableDisplay" name="label_33">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Precharge.mod_cell_temp_max.temp_A</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="CANVariableDisplay" name="label_34">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Precharge.mod_cell_temp_max.temp_B</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="CANVariableDisplay" name="label_35">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Precharge.mod_cell_temp_max.temp_C</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="CANVariableDisplay" name="label_36">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Precharge.mod_cell_temp_max.temp_D</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="verticalSpacer_5">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>40</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
     </widget>
    </item>
   </layout>

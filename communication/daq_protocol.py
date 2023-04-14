@@ -299,6 +299,7 @@ class DaqProtocol(QtCore.QObject):
         # Return if not a DAQ message
         if (msg.arbitration_id >> 6) & 0xFFFFF != 0xFFFFF: return
 
+        utils.log_error("DAQ MESSAGE")
         dbc_msg = self.can_bus.db.get_message_by_frame_id(msg.arbitration_id)
         node_name = dbc_msg.senders[0]
         data = int.from_bytes(msg.data, "little")
@@ -314,6 +315,7 @@ class DaqProtocol(QtCore.QObject):
                 var = list(utils.signals[utils.b_str][node_name][dbc_msg.name].values())[id]
                 if not (cmd == DAQ_RPLY_PUB and self.can_bus.is_paused):
                     var.update((data >> curr_bit) & ~(0xFFFFFFFFFFFFFFFF << var.bit_length), msg.timestamp, not utils.logging_paused)
+                    utils.log_error("Updated " + var.signal_name)
                 curr_bit += var.bit_length
             elif cmd == DAQ_RPLY_SAVE:
                 id = (data >> curr_bit) & DAQ_ID_MASK
