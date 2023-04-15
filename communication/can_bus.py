@@ -123,8 +123,8 @@ class CanBus(QtCore.QThread):
     def connect_tcp(self):
         # Usb failed, trying tcp
         utils.log("Trying tcp")
-        self.conected = 1
-        self.write_sig.emit(self.connected)
+        self.connected_disp = 1
+        self.write_sig.emit(self.connected_disp)
         try:
             self.tcpbus = TCPBus(self.ip, self.port)
             self.connected_tcp = True
@@ -156,13 +156,13 @@ class CanBus(QtCore.QThread):
                 else:
                     result = self.tcpbus.handshake(self.password)
             # self.connect_sig.emit(self.connected)
-            self.connected = 2
-            self.write_sig.emit(self.connected)
+            self.connected_disp = 2
+            self.write_sig.emit(self.connected_disp)
             self.tcp = True
             return
         except socket.timeout as e:
-            self.connected = 0
-            self.write_sig.emit(self.connected)
+            self.connected_disp = 0
+            self.write_sig.emit(self.connected_disp)
             utils.log_error(e)
             BindError.bindError()
             self.tcpbus.close()
@@ -173,31 +173,35 @@ class CanBus(QtCore.QThread):
         #     utils.log(f"tcp connect error {e}")
 
         #TCP Connection is in Bind State
-        # self.connected = False
+        # self.connected_disp = False
         utils.log_error("Failed to connect to the TCP")
-        # self.connect_sig.emit(self.connected)
+        # self.connect_sig.emit(self.connected_disp)
         # BindError.bindError()
         self.connectError()
-        self.connected = 0
-        self.write_sig.emit(self.connected)
+        self.connected_disp = 0
+        self.write_sig.emit(self.connected_disp)
 
 
 
     def disconnect_bus(self):
         self.connected = False
         self.connect_sig.emit(self.connected)
+        if self.tcpbus:
+            self.disconnect_tcp()
         if self.bus:
             self.bus.shutdown()
             if not self.is_wireless: usb.util.dispose_resources(self.bus.gs_usb.gs_usb)
             del(self.bus)
             self.bus = None
+
     def disconnect_tcp(self):
-        self.connected = False
-        self.write_sig.emit(self.connected)
+        self.connected_disp = 0
+        self.write_sig.emit(self.connected_disp)
         if self.tcpbus:
-            self.tcpbus.shutdown()
+            self.tcpbus.shutdown(1)
             del(self.tcpbus)
             self.tcpbus = None
+
 
     def reconnect(self):
         """ destroy usb connection, attempt to reconnect """
@@ -214,9 +218,12 @@ class CanBus(QtCore.QThread):
         self.start_date_time_str = datetime.now().strftime("%m-%d-%Y %H:%M:%S")
         self.start()
 
-    def sendLogStart(self):
+    def sendLogCmd(self, option : bool):
         """Send the start logging function"""
-        self.tcpbus.start_logging()
+        if option == True:
+            self.tcpbus.start_logging()
+        else:
+            self.tcpbus.stop_logging()
 
     def sendFormatMsg(self, msg_name, msg_data: dict):
         """ Sends a message using a dictionary of its data """

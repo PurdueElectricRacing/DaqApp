@@ -64,6 +64,7 @@ class Main(QtWidgets.QMainWindow):
         self.ui.loginButton = QtWidgets.QPushButton('Write to Car')
         self.ui.logoutButton = QtWidgets.QPushButton('Stop Writing to Car')
         self.ui.logEnableBtn = QtWidgets.QPushButton('Start Logging')
+        self.ui.logDisableBtn = QtWidgets.QPushButton('Stop Logging')
         self.ui.eventButton.setStyleSheet("border-color: black; border-style: outset; border-width: 2px;")
         self.ui.writelbl = QtWidgets.QLabel()
         self.ui.statusbar.addWidget(self.ui.comlbl)
@@ -74,10 +75,12 @@ class Main(QtWidgets.QMainWindow):
         self.ui.statusbar.addWidget(self.ui.logoutButton)
         self.ui.statusbar.addWidget(self.ui.writelbl)
         self.ui.statusbar.addWidget(self.ui.logEnableBtn)
+        self.ui.statusbar.addWidget(self.ui.logDisableBtn)
         self.ui.eventButton.clicked.connect(self.logEvent)
         self.ui.loginButton.clicked.connect(self.loginEvent)
         self.ui.logoutButton.clicked.connect(self.logoutEvent)
         self.ui.logEnableBtn.clicked.connect(self.logEvent)
+        self.ui.logDisableBtn.clicked.connect(self.logDisableEvent)
 
         # Menu Bar Tools
         self.ui.play_icon = self.style().standardIcon(getattr(QtWidgets.QStyle, 'SP_MediaPlay'))
@@ -167,15 +170,15 @@ class Main(QtWidgets.QMainWindow):
         self.ui.varEdit.setDisabled(not connected)
         self.ui.frameViewer.setDisabled(not connected)
 
-    def updateWriteConnectionStatus(self, connected: int):
+    def updateWriteConnectionStatus(self, tcpconnected: int):
         """ Updates the connection status label when connect status changes """
-        if connected == 2:
+        if tcpconnected == 2:
             self.ui.writelbl.setStyleSheet("color: green; font: 18px bold;")
             self.ui.writelbl.setText("Connected")
-        elif connected == 1:
+        elif tcpconnected == 1:
             self.ui.writelbl.setStyleSheet("color: yellow; font: 18px bold;")
             self.ui.writelbl.setText("Connecting...")
-        else:
+        elif tcpconnected == 0:
             self.ui.writelbl.setStyleSheet("color: red; font: 18px bold;")
             self.ui.writelbl.setText("Disconnected")
 
@@ -352,7 +355,11 @@ class Main(QtWidgets.QMainWindow):
 
     def logEvent(self):
         """Attempts to start PI Logger"""
-        self.can_bus.sendLogStart()
+        self.can_bus.sendLogCmd(True)
+
+    def logDisableEvent(self):
+        """Attempts to stop the PI logger"""
+        self.can_bus.sendLogCmd(False)
 
 
     def closeEvent(self, event):

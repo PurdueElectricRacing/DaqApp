@@ -76,6 +76,10 @@ class TCPBus(can.BusABC):
         self.send_buffer.put(1)
         self.send_buffer.put(0xFFFFFFFF)
 
+    def stop_logging(self):
+        self.send_buffer.put(3)
+        self.send_buffer.put(0xFFFFFFFF)
+
     def _stop_threads(self):
         #self._shutdown_flag.put(True)
         self._shutdown_flag = True
@@ -88,6 +92,9 @@ class TCPBus(can.BusABC):
         if handshake == 0:
             msg = "exit"
             self._conn.sendall(msg.encode())
+        else:
+            msg = 4
+            self._conn.sendall(msg.to_bytes(1, "little"))
         if self.is_connected:
             self._stop_threads()
         #can't join threads because this might be called from that thread, so just wait...
@@ -187,7 +194,6 @@ class TCPBus(can.BusABC):
         s = self._conn
         while not self._shutdown_flag: #self._shutdown_flag.empty():
             try:
-                print("here")
                 cmd = self.send_buffer.get(timeout=0.002)
                 msg = self.send_buffer.get(timeout=0.002)
                 data = cmd.to_bytes(1,"little")
