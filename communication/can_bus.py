@@ -41,6 +41,7 @@ class CanBus(QtCore.QThread):
         self.start_time_bus = -1
         self.start_date_time_str = ""
         self.tcp = False
+        self.tcpbus = None
 
         # Bus Load Estimation
         self.total_bits = 0
@@ -263,15 +264,18 @@ class CanBus(QtCore.QThread):
                 dbc_msg = self.db.get_message_by_frame_id(msg.arbitration_id)
                 decode = dbc_msg.decode(msg.data)
                 for sig in decode.keys():
-                    utils.signals[utils.b_str][dbc_msg.senders[0]][dbc_msg.name][sig].update(decode[sig], msg.timestamp, not utils.logging_paused or self.is_importing)
+                    sig_val = decode[sig]
+                    if (type(sig_val) != str):
+                        utils.signals[utils.b_str][dbc_msg.senders[0]][dbc_msg.name][sig].update(sig_val, msg.timestamp, not utils.logging_paused or self.is_importing)
             except KeyError:
-                if dbc_msg and "daq" not in dbc_msg.name:
+                if dbc_msg and "daq" not in dbc_msg.name and "fault" not in dbc_msg.name:
                     if utils.debug_mode: utils.log_warning(f"Unrecognized signal key for {msg}")
-                else:
-                    if utils.debug_mode: utils.log_warning(f"unrecognized: {msg.arbitration_id}")
-            except ValueError:
+                # elif "fault" not in dbc_msg.name:
+                #     if utils.debug_mode: utils.log_warning(f"unrecognized: {msg.arbitration_id}")
+            except ValueError as e:
                 if "daq" not in dbc_msg.name:
                     if utils.debug_mode: utils.log_warning(f"Failed to convert msg: {msg}")
+                    print(e)
         # if (msg.is_error_frame):
         #     utils.log(msg)
 
