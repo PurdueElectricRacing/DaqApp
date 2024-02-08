@@ -208,7 +208,56 @@
      <property name="title">
       <string>Encoders</string>
      </property>
-     <layout class="QVBoxLayout" name="verticalLayout_6"/>
+     <layout class="QVBoxLayout" name="verticalLayout">
+      <item>
+       <widget class="CANVariableDisplay" name="label_26">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Main_Module.rear_wheel_speeds.left_speed_mc</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="CANVariableDisplay" name="label_28">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Main_Module.rear_wheel_speeds.left_speed_sensor</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="CANVariableDisplay" name="label_27">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Main_Module.rear_wheel_speeds.right_speed_mc</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="CANVariableDisplay" name="label_33">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Main_Module.rear_wheel_speeds.right_speed_sensor</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </widget>
    </item>
   </layout>

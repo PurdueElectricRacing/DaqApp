@@ -61,7 +61,7 @@ def update_firmware(bl: BootloaderCommand, fname) -> None:
     for seg in segments:
         print(f"Segment: 0x{seg[0]:02X} : 0x{seg[1]:02X}")
     
-    assert(segments[0][0] == 0x8002000)
+    assert(segments[0][0] >= 0x8002000) # Enforce bootloader application build
     total_bytes = segments[0][1] - segments[0][0]
     total_words = ceil(total_bytes / 4)
     print("Waiting for node to enter bootloader mode")

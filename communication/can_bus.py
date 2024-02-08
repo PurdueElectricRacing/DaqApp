@@ -347,7 +347,7 @@ class BusSignal(QtCore.QObject):
     """ Signal that can be subscribed (connected) to for updates """
 
     update_sig = QtCore.pyqtSignal()
-    history = 240000 # for 0.015s update period 1 hour of data
+    history = 500000#240000 # for 0.015s update period 1 hour of data
     data_lock = threading.Lock()
 
     def __init__(self, bus_name, node_name, msg_name, sig_name, dtype, store_dtype=None, unit="", msg_desc="", sig_desc="", msg_period=0):
