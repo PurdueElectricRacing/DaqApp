@@ -38,15 +38,18 @@ class TCPBus(can.BusABC):
         self._is_connected = True
         self._conn.settimeout(0.5) #blocking makes exiting an infinite loop hard
 
-    def handshake(self, password:str):
-        self._conn.sendall(password.encode())
-        data_raw = self._conn.recv(1)
-        data = int.from_bytes(data_raw,"little")
-        print(f"recieved: {data}")
-        if data == 0x00:
-            print("returning false")
-            return False
-        print("returing true")
+        self.start_threads()
+
+
+    def start_threads(self):
+        # self._conn.sendall(password.encode())
+        # data_raw = self._conn.recv(1)
+        # data = int.from_bytes(data_raw,"little")
+        # print(f"recieved: {data}")
+        # if data == 0x00:
+        #     print("returning false")
+        #     return False
+        # print("returing true")
         #now we're connected, kick off other threads.
         self._tcp_listener = Thread(target=self._poll_socket)
         self._tcp_listener.start()
@@ -112,9 +115,11 @@ class TCPBus(can.BusABC):
 
     def _msg_to_bytes(self,msg):
         """convert Message object to bytes to be put on TCP socket"""
+        # print(msg)
         arb_id = msg.arbitration_id.to_bytes(4,"little") #TODO: masks
         dlc = msg.dlc.to_bytes(1,"little")
         data = msg.data + bytes(8-msg.dlc)
+        # print(arb_id + dlc + data)
         return arb_id+dlc+data
 
     def _bytes_to_message(self,b):
@@ -200,13 +205,14 @@ class TCPBus(can.BusABC):
                 if (cmd == 0):
                     data += self._msg_to_bytes(msg)
                 else:
-                    data += msg.to_bytes(4, "little")
+                    data += bytearray(13)
+                    #data += msg.to_bytes(4, "little")
                 while not self.send_buffer.empty(): #we know there's one message, might be more.
                     data += self.send_buffer.get().to_bytes(1,"little")
                     data += self._msg_to_bytes(self.send_buffer.get())
                 try:
                     s.sendall(data)
-                    print("sent\n\n\n\n\n\n\n\n\n\n\n\n\n")
+                    print(f"sent {data}")
                 except OSError as e:
                     # socket's been closed.
                     utils.log_error(f"ERROR: connection closed (3): {e}")
@@ -216,7 +222,8 @@ class TCPBus(can.BusABC):
                 pass #NBD, just means nothing to send.
         # utils.log("Exited poll send")
 class UDPBus(can.BusABC):
-    RECV_FRAME_SZ = 29
+    #RECV_FRAME_SZ = 29
+    RECV_FRAME_SZ = 18
     CAN_EFF_FLAG = 0x80000000
     CAN_RTR_FLAG = 0x40000000
     CAN_ERR_FLAG = 0x20000000
@@ -245,11 +252,15 @@ class UDPBus(can.BusABC):
     def _bytes_to_message(self,b):
         """convert raw TCP bytes to can.Message object"""
         #ts = int.from_bytes(b[:4],"little") + int.from_bytes(b[4:8],"little")/ e6
-        ts = int.from_bytes(b[:8],"little") + int.from_bytes(b[8:16],"little")/1e6
+        # ts = int.from_bytes(b[:8],"little") + int.from_bytes(b[8:16],"little")/1e6
+        ts = int.from_bytes(b[:4], "little")/1000.0
         #print(f"len: {len(b)}, time: {ts}, data: {b}")
         #can_id = int.from_bytes(b[8:12],"little")
-        can_id = int.from_bytes(b[16:20],"little")
-        dlc = b[20] #TODO: sanity check on these values in case of corrupted messages.
+        # can_id = int.from_bytes(b[16:20],"little")
+        can_id = int.from_bytes(b[4:8], 'little')
+        #dlc = b[20] #TODO: sanity check on these values in case of corrupted messages.
+        bus_id = b[8]
+        dlc = b[9]
 
         #decompose ID
         is_extended = bool(can_id & self.CAN_EFF_FLAG) #CAN_EFF_FLAG
@@ -265,8 +276,10 @@ class UDPBus(can.BusABC):
             is_error_frame = bool(can_id & self.CAN_ERR_FLAG), #CAN_ERR_FLAG
             is_remote_frame = bool(can_id & self.CAN_RTR_FLAG), #CAN_RTR_FLAG
             dlc=dlc,
+            channel=bus_id,
             #data=b[13:13+dlc]
-            data=b[21:21+dlc]
+            #data=b[21:21+dlc]
+            data=b[10:10+dlc]
         )
     def send(self,msg):
         if msg.is_extended_id:
