@@ -67,8 +67,7 @@ class CanBus(QtCore.QThread):
         """ Connects to the bus """
         utils.log("Trying usb")
         # Attempt usb connection first
-        #dev = usb.core.find(idVendor=0x1D50, idProduct=0x606F)
-        dev = False
+        dev = usb.core.find(idVendor=0x1D50, idProduct=0x606F)
         if dev:
             channel = dev.product
             bus_num = dev.bus
