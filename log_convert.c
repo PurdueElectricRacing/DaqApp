@@ -60,7 +60,7 @@ int main (int argc, char **argv)
         printf("Failed to open file \'%s\'\n", argv[1]);
     }
 
-    bool print_msg = false;
+    bool print_msg = true;
 
     timestamped_frame_t tf;
     char *bus_str;
@@ -93,12 +93,12 @@ int main (int argc, char **argv)
                 bus_str = "unknown";
             break;
         }
-        if (print_msg) ("(%f) %s %08x#", time_s, bus_str, 
+        if (print_msg) printf("(%f) %s %08x#", time_s, bus_str, 
                                   tf.msg_id & CAN_EFF_MASK);
         uint32_t val = 0;
         for (uint8_t i = 0; i < tf.dlc; ++i)
         {
-            if (print_msg) ("%02x", tf.data[i]);
+            if (print_msg) printf("%02x", tf.data[i]);
             val = val | (tf.data[i] << (i*8));
         }
         if (print_msg) printf("\n");
@@ -108,7 +108,7 @@ int main (int argc, char **argv)
             dt = time_s - last_time;
             if (dt < 0) 
             {
-                printf("Time skip from %f to %f\n", last_time, time_s);
+                if (!print_msg) printf("Time skip from %f to %f\n", last_time, time_s);
                 ++time_skips;
             }
             dt_avg += dt;
@@ -116,7 +116,7 @@ int main (int argc, char **argv)
             dt_max = (dt > dt_max) ? dt : dt_max;
             if (val != last_val + 1) 
 	    {
-		printf("Value skip from %d to %d (time %f to %f)\n", last_val, val, last_time, time_s);
+		if (!print_msg) printf("Value skip from %d to %d (time %f to %f)\n", last_val, val, last_time, time_s);
 	    	++skips;
 	    }
         }

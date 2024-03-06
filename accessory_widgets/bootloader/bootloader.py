@@ -144,7 +144,7 @@ class Bootloader(QtWidgets.QWidget):
         self.crc = 0xFFFFFFFF
         self._logInfo(f"Flashing {self.selected_node}")
         self.ui.progressBar.setValue(5)
-        self.flash_timeout_timer.start(3000)
+        self.flash_timeout_timer.start(10000)
         self.flash_start_time = time.time()
 
     def addStatusIndicator(self, name):
@@ -198,7 +198,8 @@ class Bootloader(QtWidgets.QWidget):
         elif (self.flash_state == self.FLASH_STATE['STREAMING_DATA']):
             if (cmd == self.bl.RX_CMD['BLSTAT_PROGRESS']):
                 self.flash_timeout_timer.stop()
-                self.flash_timeout_timer.start(2000) # reset timer
+                #self.flash_timeout_timer.start(2000) # reset timer
+                self.flash_timeout_timer.start(10000) # reset timer
                 #     self.curr_addr += 8
                 #     if (self.curr_addr < self.segments[0][1]):
                 #         # Not at end, send either 10 more or up to segments
