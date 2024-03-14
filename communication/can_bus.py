@@ -27,6 +27,8 @@ class CanBus(QtCore.QThread):
     write_sig = QtCore.pyqtSignal(int)
     bus_load_sig = QtCore.pyqtSignal(float)
     new_msg_sig = QtCore.pyqtSignal(can.Message)
+    daq_msg_sig = QtCore.pyqtSignal(can.Message)
+    flt_msg_sig = QtCore.pyqtSignal(can.Message)
     bl_msg_sig = QtCore.pyqtSignal(can.Message)
 
     def __init__(self, dbc_path, default_ip, can_config: dict):
@@ -53,7 +55,8 @@ class CanBus(QtCore.QThread):
 
         self.is_importing = False
 
-        self.port = 8080
+        #self.port = 8080
+        self.port = 5005
         self.ip = default_ip
         #self.ip = "10.42.0.1"
         self.password = None
@@ -130,33 +133,33 @@ class CanBus(QtCore.QThread):
             self.tcpbus = TCPBus(self.ip, self.port)
             self.connected_tcp = True
             # Empty buffer of old messages
-            time.sleep(3)
+            # time.sleep(3)
             i=0
             while(self.tcpbus.recv(0)):
                 i+=1
             utils.log(f"cleared {i} from buffer")
             utils.log("Tcp successful")
-            self.password = PasswordDialog.promptPassword(self.password)
-            print(self.password)
-            result = True
-            if self.password == "":
-                result = False
-            elif self.password == None:
-                self.tcpbus.shutdown(0)
-                result = True
-            else:
-                result = self.tcpbus.handshake(self.password)
-            while not result:
-                self.password = None
-                self.password = PasswordDialog.setText(self.password)
-                if self.password == "":
-                    result = False
-                elif self.password == None:
-                    self.tcpbus.shutdown(0)
-                    result = True
-                else:
-                    result = self.tcpbus.handshake(self.password)
-            # self.connect_sig.emit(self.connected)
+            # self.password = PasswordDialog.promptPassword(self.password)
+            # print(self.password)
+            # result = True
+            # if self.password == "":
+            #     result = False
+            # elif self.password == None:
+            #     self.tcpbus.shutdown(0)
+            #     result = True
+            # else:
+            #     result = self.tcpbus.handshake(self.password)
+            # while not result:
+            #     self.password = None
+            #     self.password = PasswordDialog.setText(self.password)
+            #     if self.password == "":
+            #         result = False
+            #     elif self.password == None:
+            #         self.tcpbus.shutdown(0)
+            #         result = True
+            #     else:
+            #         result = self.tcpbus.handshake(self.password)
+            # # self.connect_sig.emit(self.connected)
             self.connected_disp = 2
             self.write_sig.emit(self.connected_disp)
             self.tcp = True
@@ -221,10 +224,13 @@ class CanBus(QtCore.QThread):
 
     def sendLogCmd(self, option : bool):
         """Send the start logging function"""
-        if option == True:
-            self.tcpbus.start_logging()
+        if self.tcp and self.tcpbus:
+            if option == True:
+                self.tcpbus.start_logging()
+            else:
+                self.tcpbus.stop_logging()
         else:
-            self.tcpbus.stop_logging()
+            utils.log_warning('Must connect to TCP bus to control logging, please click write to car')
 
     def sendFormatMsg(self, msg_name, msg_data: dict):
         """ Sends a message using a dictionary of its data """
@@ -239,24 +245,36 @@ class CanBus(QtCore.QThread):
     def sendMsg(self, msg: can.Message):
         """ Sends a can message over the bus """
         if self.connected:
-            if self.tcp:
-                self.tcpbus.send(msg)
+            if self.is_wireless:
+                if self.tcpbus:
+                    self.tcpbus.send(msg)
+                else:
+                    utils.log_warning('Unable to send message, please click write to car')
             else:
                 self.bus.send(msg)
         else:
             utils.log_error("Tried to send msg without connection")
+        
+    def updateStartTime(self, new_time):
+        self.start_time_bus = new_time
+        self.start_time_cmp = time.time()
+        self.start_date_time_str = datetime.now().strftime("%m-%d-%Y %H:%M:%S")
+        utils.log_warning(f"Start time changed: {new_time}")
+        self.out_of_order_cnt = 0
 
     def onMessageReceived(self, msg: can.Message):
         """ Emits new message signal and updates the corresponding signals """
         if self.start_time_bus == -1:
-            self.start_time_bus = msg.timestamp
-            self.start_time_cmp = time.time()
-            self.start_date_time_str = datetime.now().strftime("%m-%d-%Y %H:%M:%S")
-            utils.log_warning(f"Start time changed: {msg.timestamp}")
+            self.updateStartTime(msg.timestamp)
         if msg.timestamp - self.start_time_bus < 0:
             utils.log_warning("Out of order")
+            self.out_of_order_cnt = self.out_of_order_cnt + 1
+            if (self.out_of_order_cnt > 50): self.updateStartTime(msg.timestamp)
+                
         msg.timestamp -= self.start_time_bus
-        self.new_msg_sig.emit(msg) # TODO: only emit signal if DAQ msg for daq_protocol, currently receives all msgs (low priority performance improvement)
+        self.new_msg_sig.emit(msg) 
+        if (msg.arbitration_id >> 6) & 0xFFFFF == 0xFFFFF: self.daq_msg_sig.emit(msg) # Check if it could be daq
+        if (msg.arbitration_id & (0x1C000000) != 0): self.flt_msg_sig.emit(msg) # Check for HLP = 0
         if (msg.arbitration_id & 0x3F == 60): self.bl_msg_sig.emit(msg) # emit for bootloader
         if not msg.is_error_frame:
             dbc_msg = None

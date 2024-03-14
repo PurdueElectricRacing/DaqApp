@@ -30,7 +30,7 @@ class FaultViewer(QtWidgets.QWidget):
         self.ui.ReturnSend.clicked.connect(self.returnMessage)
 
         self.bus = bus
-        bus.new_msg_sig.connect(self.messageRecieved)
+        bus.flt_msg_sig.connect(self.messageRecieved)
 
         self.sigs_exist = False
         self.ui.indicators = []
@@ -131,8 +131,9 @@ class FaultViewer(QtWidgets.QWidget):
                 index = decode_msg['idx']
                 latched = decode_msg['latched']
             except ValueError as e:
-                data = hex(int.from_bytes(msg.data, "little"))
-                utils.log_warning(e)
+                # data = hex(int.from_bytes(msg.data, "little"))
+                # utils.log_warning(e)
+                return
         except KeyError:
             return
         with self.data_lock:

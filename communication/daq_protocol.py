@@ -144,7 +144,7 @@ class DaqProtocol(QtCore.QObject):
     def __init__(self, bus: CanBus, daq_config: dict):
         super(DaqProtocol, self).__init__()
         self.can_bus = bus
-        self.can_bus.new_msg_sig.connect(self.handleDaqMsg)
+        self.can_bus.daq_msg_sig.connect(self.handleDaqMsg)
 
         self.updateVarDict(daq_config)
 
@@ -297,9 +297,8 @@ class DaqProtocol(QtCore.QObject):
     def handleDaqMsg(self, msg: can.Message):
         """ Interprets and runs commands from DAQ message """
         # Return if not a DAQ message
-        if (msg.arbitration_id >> 6) & 0xFFFFF != 0xFFFFF: return
 
-        utils.log_error("DAQ MESSAGE")
+        utils.log_success("DAQ MESSAGE")
         dbc_msg = self.can_bus.db.get_message_by_frame_id(msg.arbitration_id)
         node_name = dbc_msg.senders[0]
         data = int.from_bytes(msg.data, "little")
