@@ -254,7 +254,7 @@ class CanBus(QtCore.QThread):
                 self.bus.send(msg)
         else:
             utils.log_error("Tried to send msg without connection")
-        
+
     def updateStartTime(self, new_time):
         self.start_time_bus = new_time
         self.start_time_cmp = time.time()
@@ -270,11 +270,11 @@ class CanBus(QtCore.QThread):
             utils.log_warning("Out of order")
             self.out_of_order_cnt = self.out_of_order_cnt + 1
             if (self.out_of_order_cnt > 50): self.updateStartTime(msg.timestamp)
-                
+
         msg.timestamp -= self.start_time_bus
-        self.new_msg_sig.emit(msg) 
+        self.new_msg_sig.emit(msg)
         if (msg.arbitration_id >> 6) & 0xFFFFF == 0xFFFFF: self.daq_msg_sig.emit(msg) # Check if it could be daq
-        if (msg.arbitration_id & (0x1C000000) != 0): self.flt_msg_sig.emit(msg) # Check for HLP = 0
+        if (msg.arbitration_id & (0x8c000) != 0): self.flt_msg_sig.emit(msg) # Check for HLP = 0
         if (msg.arbitration_id & 0x3F == 60): self.bl_msg_sig.emit(msg) # emit for bootloader
         if not msg.is_error_frame:
             dbc_msg = None
