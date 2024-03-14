@@ -237,7 +237,7 @@ class Bootloader(QtWidgets.QWidget):
             if (self.curr_addr < self.segments[0][1]):
                 self.sendSegmentDoubleWord(self.curr_addr)
                 self.curr_addr += 8
-                self.ui.progressBar.setValue((90 * (self.curr_addr - self.segments[0][0])) / self.total_bytes + 5)
+                self.ui.progressBar.setValue(int((90 * (self.curr_addr - self.segments[0][0])) / self.total_bytes + 5))
             else:
                 self._logInfo("Sending CRC checksum")
                 can_tx = self.bl.firmware_crc_msg(self.crc & 0xFFFFFFFF)

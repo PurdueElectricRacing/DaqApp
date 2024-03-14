@@ -384,7 +384,7 @@ class BusSignal(QtCore.QObject):
         else: self.store_dtype = store_dtype
         self.curr_idx = 0
         self.data  = np.zeros(self.history, dtype=self.store_dtype)
-        self.times = np.zeros(self.history, dtype=np.float)
+        self.times = np.zeros(self.history, dtype=np.float32)
         self.color = QtGui.QColor(255, 255, 255)
         self.stale_timestamp = time.time()
         if not utils.dark_mode:
