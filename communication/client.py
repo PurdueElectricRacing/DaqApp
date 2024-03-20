@@ -6,6 +6,7 @@ from threading import Thread
 import can
 from time import sleep
 import utils
+import datetime
 
 # modification of:
 # https://github.com/teebr/socketsocketcan
@@ -56,7 +57,17 @@ class TCPBus(can.BusABC):
 
         self._tcp_writer = Thread(target=self._poll_send)
         self._tcp_writer.start()
+
+        self.send_time_sync()
         return True
+    
+    def send_time_sync(self):
+        # Sends the current time to update RTC
+        self.send_buffer.put(4)
+        t = datetime.datetime.now() 
+        v = bytes([0,0,0,0,0,t.second, t.minute, t.hour, 
+                   t.day, t.month, (t.year-2000), 0, 0])
+        self.send_buffer.put(v)
 
     def _recv_internal(self,timeout=None):
         #TODO: filtering
@@ -204,6 +215,8 @@ class TCPBus(can.BusABC):
                 data = cmd.to_bytes(1,"little")
                 if (cmd == 0):
                     data += self._msg_to_bytes(msg)
+                elif (cmd == 4):
+                    data += msg
                 else:
                     data += bytearray(13)
                     #data += msg.to_bytes(4, "little")
