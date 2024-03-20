@@ -453,4 +453,4 @@ class BusSignal(QtCore.QObject):
         """ based on last receive time """
         if self.msg_period == 0: return False
         else:
-            return ((time.time() - self.stale_timestamp) * 1000) > self.msg_period * 1.5
+            return ((time.time() - self.stale_timestamp) * 1000) > self.msg_period * 4.0
