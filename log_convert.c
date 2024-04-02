@@ -22,6 +22,9 @@
 #define CAN_EFF_MASK 0x1FFFFFFFU /* extended frame format (EFF) */
 #define CAN_ERR_MASK 0x1FFFFFFFU /* omit EFF, RTR, ERR flags */
 
+#define ID_RAW_THROTTLE_BRAKE 0x14000285
+#define ID_FILT_THROTTLE_BRAKE 0x4000245
+#define MSG_TO_USE ID_FILT_THROTTLE_BRAKE
 /*
  * Controller Area Network Identifier structure
  *
@@ -60,7 +63,7 @@ int main (int argc, char **argv)
         printf("Failed to open file \'%s\'\n", argv[1]);
     }
 
-    bool print_msg = true;
+    bool print_msg = false;
 
     timestamped_frame_t tf;
     char *bus_str;
@@ -75,7 +78,9 @@ int main (int argc, char **argv)
     uint32_t time_skips = 0;
     while(fread(&tf, sizeof(tf), 1, fp) > 0)
     {
+        if ((tf.msg_id & CAN_EFF_MASK) != MSG_TO_USE) continue;
         float time_s = tf.tick_ms / 1000.0;
+        // printf("times: %f\n", time_s);
         if (tf.dlc > 8)
         {
             printf("Error: dlc=%d > 8\n", tf.dlc);
@@ -114,11 +119,11 @@ int main (int argc, char **argv)
             dt_avg += dt;
             dt_count++;
             dt_max = (dt > dt_max) ? dt : dt_max;
-            if (val != last_val + 1) 
-	    {
-		if (!print_msg) printf("Value skip from %d to %d (time %f to %f)\n", last_val, val, last_time, time_s);
-	    	++skips;
-	    }
+            // if (val != last_val + 1) 
+            // {
+            //     if (!print_msg) printf("Value skip from %d to %d (time %f to %f)\n", last_val, val, last_time, time_s);
+            //         ++skips;
+            // }
         }
         else
         {
