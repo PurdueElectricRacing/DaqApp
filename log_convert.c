@@ -24,6 +24,12 @@
 
 #define ID_RAW_THROTTLE_BRAKE 0x14000285
 #define ID_FILT_THROTTLE_BRAKE 0x4000245
+#define ID_FAULT_TV (2148059831 & CAN_EFF_MASK)
+#define ID_FAULT_MAIN (2148059649 & CAN_EFF_MASK)
+#define ID_FAULT_ABOX (2148059716 & CAN_EFF_MASK)
+#define ID_FAULT_PDU (2148059935 & CAN_EFF_MASK)
+
+
 #define MSG_TO_USE ID_FILT_THROTTLE_BRAKE
 /*
  * Controller Area Network Identifier structure
@@ -63,7 +69,7 @@ int main (int argc, char **argv)
         printf("Failed to open file \'%s\'\n", argv[1]);
     }
 
-    bool print_msg = false;
+    bool print_msg = true;
 
     timestamped_frame_t tf;
     char *bus_str;
@@ -71,6 +77,7 @@ int main (int argc, char **argv)
     float dt = 0.0;
     uint32_t dt_count = 0;
     float dt_max = 0.0;
+    float dt_min = 0.0;
     float last_time = 0.0;
     uint32_t last_val = 0;
     uint32_t first_val = 0;
@@ -78,7 +85,7 @@ int main (int argc, char **argv)
     uint32_t time_skips = 0;
     while(fread(&tf, sizeof(tf), 1, fp) > 0)
     {
-        if ((tf.msg_id & CAN_EFF_MASK) != MSG_TO_USE) continue;
+        //if ((tf.msg_id & CAN_EFF_MASK) != MSG_TO_USE) continue;
         float time_s = tf.tick_ms / 1000.0;
         // printf("times: %f\n", time_s);
         if (tf.dlc > 8)
@@ -98,8 +105,17 @@ int main (int argc, char **argv)
                 bus_str = "unknown";
             break;
         }
-        if (print_msg) printf("(%f) %s %08x#", time_s, bus_str, 
-                                  tf.msg_id & CAN_EFF_MASK);
+        if (print_msg) 
+        {
+            if (tf.msg_id & CAN_EFF_FLAG)
+            {
+                printf("(%f) %s %08x#", time_s, bus_str, 
+                                        tf.msg_id & CAN_EFF_MASK);
+            }
+            if (tf.msg_id & CAN_ERR_FLAG)
+                printf("(%f) %s %08x# <- err", time_s, bus_str, 
+                                        tf.msg_id);
+        }
         uint32_t val = 0;
         for (uint8_t i = 0; i < tf.dlc; ++i)
         {
@@ -119,6 +135,11 @@ int main (int argc, char **argv)
             dt_avg += dt;
             dt_count++;
             dt_max = (dt > dt_max) ? dt : dt_max;
+            if (dt < dt_min)
+            {
+                dt_min = dt;
+            }
+            // printf("dt: %f\n", dt);
             // if (val != last_val + 1) 
             // {
             //     if (!print_msg) printf("Value skip from %d to %d (time %f to %f)\n", last_val, val, last_time, time_s);
@@ -128,6 +149,7 @@ int main (int argc, char **argv)
         else
         {
             first_val = val;
+            dt_min = val;
         }
         last_time = time_s;
         last_val = val;
@@ -136,6 +158,7 @@ int main (int argc, char **argv)
     dt_avg /= dt_count;
     printf("Average dt: %f\n", dt_avg);
     printf("Max: %f\n", dt_max);
+    printf("Min: %f\n", dt_min);
     printf("Count: %lu\n", dt_count);
     printf("First value %lu\n", first_val);
     printf("Last value %lu\n", last_val);

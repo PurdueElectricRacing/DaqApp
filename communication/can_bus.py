@@ -281,6 +281,7 @@ class CanBus(QtCore.QThread):
             try:
                 dbc_msg = self.db.get_message_by_frame_id(msg.arbitration_id)
                 decode = dbc_msg.decode(msg.data)
+                #print(dbc_msg.name)
                 for sig in decode.keys():
                     sig_val = decode[sig]
                     if (type(sig_val) != str):
@@ -294,8 +295,8 @@ class CanBus(QtCore.QThread):
                 if "daq" not in dbc_msg.name:
                     if utils.debug_mode: utils.log_warning(f"Failed to convert msg: {msg}")
                     print(e)
-        # if (msg.is_error_frame):
-        #     utils.log(msg)
+        if (msg.is_error_frame):
+            utils.log(msg)
 
         # bus load estimation
         msg_bit_length_max = 64 + msg.dlc * 8 + 18

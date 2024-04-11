@@ -46,6 +46,10 @@ class LogExporter():
         self.start_t = 0
         self.start_t_valid = False
         self.out_file = None
+        self.prev_is_err = False
+        self.prev_msg = ""
+
+        self.out_to_file = True
 
         np.set_printoptions(nanstr="")
 
@@ -113,6 +117,7 @@ class LogExporter():
 
     def _new_out_file(self):
         # Ensure if current row exists that we write it
+        if not self.out_to_file: return
         if (self.out_file != None): 
             self._write_row()
             self.out_file.close()
@@ -122,6 +127,7 @@ class LogExporter():
         self.row.fill(np.nan)
 
     def _write_row(self):
+        if not self.out_file: return
         for n in self.row:
             if not np.isnan(n):
                 self.out_file.write("%.5f" % n)
@@ -165,7 +171,9 @@ class LogExporter():
                     if (type(sig_val) != str):
                         col = self.signal_to_col[dbc_msg.bus_name][dbc_msg.senders[0]][dbc_msg.name][sig]
                         self._update_val(msg.timestamp, col, sig_val)
+                # if self.prev_is_err: print(f"{dbc_msg.name} proceeded error")
                 #utils.signals[utils.b_str][dbc_msg.senders[0]][dbc_msg.name][sig].update(sig_val, msg.timestamp, not utils.logging_paused or self.is_importing)
+                self.prev_msg = dbc_msg.name
             except KeyError:
                 if dbc_msg and "daq" not in dbc_msg.name and "fault" not in dbc_msg.name:
                     log_warning(f"Unrecognized signal key for {msg}")
@@ -174,7 +182,12 @@ class LogExporter():
                     log_warning(f"Failed to convert msg: {msg}")
                     print(e)
         if msg.is_error_frame:
-            log(f"Received error frame: {msg}")
+            # log(f"Received error frame: {msg}")
+            # if not self.prev_is_err:
+            #     print(f"{self.prev_msg} preceeded error")
+            self.prev_is_err = True
+        else:
+            self.prev_is_err = False
 
     def _get_input_file_list(self, dir):
         "Gets .log files sorted by creation time"
@@ -218,16 +231,21 @@ class LogExporter():
             self.out_file.close()
 
 #p = "D:/log_recovery/recovered_logs/"
-#p = "F:/"
-p = "D:/2024_04_01_logs/in"
+p = "F:/"
+#p = "D:/2024_04_01_logs/in"
+p = "D:/Otterbein_04_06_2024/Evening"
+p = "E:\DT_test2"
 #p = "D:/log_recovery/test_in" 
 #p = "D:/log_recovery/ruhaan_driving/"
 #out_dir = "D:/log_recovery/test_out"
-out_dir = "D:/2024_04_01_logs/out"
+#out_dir = "D:/2024_04_01_logs/out"
+#out_dir = "D:/Otterbein_4_5_24"
+out_dir = "D:/Otterbein_04_06_2024/Evening_parsed"
+out_dir = "D:/04_07_2024 DT Testing/DT2"
 
 #dbc_dir = "D:/Downloads/per_dbc.dbc"
 dbc_dir = "C:/users/lukeo/Documents/firmware/common/daq/per_dbc.dbc"
 
 le = LogExporter(dbc_dir)
 
-le.parse_files(p, out_dir, fill_empty_vals=False)
+le.parse_files(p, out_dir, fill_empty_vals=True)
