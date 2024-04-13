@@ -73,7 +73,7 @@ class CanBus(QtCore.QThread):
             bus_num = dev.bus
             addr = dev.address
             del(dev)
-            self.bus = can.ThreadSafeBus(bustype="gs_usb", channel=channel, bus=bus_num, address=addr, bitrate=500000)
+            self.bus = can.ThreadSafeBus(bustype="gs_usb", channel=channel, bus=bus_num, address=addr, bitrate=250000)
             # Empty buffer of old messages
             while(self.bus.recv(0)): pass
             self.connected = True
@@ -351,7 +351,7 @@ class CanBus(QtCore.QThread):
             # Bus load estimation
             if (time.time() - self.last_estimate_time) > 1:
                 self.last_estimate_time = time.time()
-                bus_load = self.total_bits / 500000.0 * 100
+                bus_load = self.total_bits / 250000.0 * 100
                 self.total_bits = 0
                 self.bus_load_sig.emit(bus_load)
                 # if loop_count != 0 and loop_count-skips != 0 and utils.debug_mode: print(f"rx period (ms): {1/loop_count*1000}, skipped: {skips}, process time (ms): {avg_process_time / (loop_count-skips)*1000}")
