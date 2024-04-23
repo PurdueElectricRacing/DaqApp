@@ -45,13 +45,14 @@ class Main(QtWidgets.QMainWindow):
 
         print(sys.platform)
         # Load Configurations (dictionaries)
-        self.daq_config = utils.load_json_config(config['daq_config_path'], config['daq_schema_path'])
-        self.can_config = utils.load_json_config(config['can_config_path'], config['can_schema_path'])
-        self.fault_config = utils.load_json_config(config['fault_config_path'], config['fault_schema_path'])
+        firmware_base = config['firmware_path']
+        self.daq_config = utils.load_json_config(os.path.join(firmware_base, 'common/daq/daq_config.json'), os.path.join(firmware_base, 'common/daq/daq_schema.json'))
+        self.can_config = utils.load_json_config(os.path.join(firmware_base, 'common/daq/can_config.json'), os.path.join(firmware_base, 'common/daq/can_schema.json'))
+        self.fault_config = utils.load_json_config(os.path.join(firmware_base, 'common/faults/fault_config.json'), os.path.join(firmware_base, 'common/faults/fault_schema.json'))
         self.fault_config = DaqProtocol.create_ids(self, self.fault_config)
 
         # Can Bus Initialization
-        self.can_bus = CanBus(config['dbc_path'], config['default_ip'], self.can_config)
+        self.can_bus = CanBus(os.path.join(firmware_base, 'common/daq/per_dbc.dbc'), config['default_ip'], self.can_config)
         self.can_bus.connect_sig.connect(self.updateConnectionStatus)
         self.can_bus.write_sig.connect(self.updateWriteConnectionStatus)
         self.can_bus.bus_load_sig.connect(self.updateBusLoad)
