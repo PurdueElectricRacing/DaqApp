@@ -68,6 +68,12 @@ class Bootloader(QtWidgets.QWidget):
         self._logInfo(f"{len(self.bl_nodes)} bootloader nodes loaded")
         self.flashReset(0)
 
+        self.ui.autoReloadCheckbox.stateChanged.connect(self.toggleAutoReload)
+        self.autoReload = True
+
+    def toggleAutoReload(self, state):
+        self.autoReload = bool(state)
+
     def calcNodes(self):
         # Determine node names from bus
         self.nodes = []
@@ -131,6 +137,8 @@ class Bootloader(QtWidgets.QWidget):
     
     def requestFlash(self):
         if (not self.bl): return
+        if self.autoReload:
+            self.verifyHex(self.hex_loc)
         if (not self.segments):
             self._logInfo(f"Cannot flash {self.selected_node}, invalid hex")
             return
