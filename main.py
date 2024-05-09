@@ -1,4 +1,6 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
+from PyQt5.QtWidgets import QDockWidget, QWidget, QVBoxLayout, QComboBox
+
 from accessory_widgets.bootloader.bootloader import Bootloader
 from accessory_widgets.frame_viewer import FrameViewer
 from accessory_widgets.car_viewer import CarViewer
@@ -166,6 +168,44 @@ class Main(QtWidgets.QMainWindow):
         # self.can_bus.reconnect()
         self.show()
 
+        # Init View Switcher
+        self.initViewSwitcher()
+
+    def initViewSwitcher(self):
+        self.viewSwitcher = QDockWidget(self)
+        self.viewSwitcher.setFeatures(QDockWidget.NoDockWidgetFeatures)
+        self.viewSwitcher.setTitleBarWidget(QWidget())  # Delete Title Bar
+        self.addDockWidget(QtCore.Qt.TopDockWidgetArea, self.viewSwitcher)
+
+        switcherContents = QWidget()
+        switcherLayout = QVBoxLayout(switcherContents)
+
+        self.views_dropdown = QComboBox()
+        view_widgets = {
+            "Frame Viewer": self.ui.frameViewer,
+            "Bootloader": self.ui.bootloader,
+            "Car Viewer": self.ui.carViewer,
+            "Cell Viewer": self.ui.cellViewer,
+            "Charge Viewer": self.ui.chargeViewer,
+            "Fault Viewer": self.ui.faultViewer,
+            "Log Exporter": self.ui.logExporter,
+            "Motor Viewer": self.ui.motorViewer,
+            "Sensor Viewer": self.ui.sensorViewer,
+            "System Monitor": self.ui.systemMonitor,
+            "Variable Editor": self.ui.varEdit
+        }
+        self.views_dropdown.addItems(view_widgets.keys())
+        self.views_dropdown.currentIndexChanged.connect(lambda i: self.toggleView(view_widgets, i))
+        switcherLayout.addWidget(self.views_dropdown)
+        self.viewSwitcher.setWidget(switcherContents)
+
+    def toggleView(self, view_widgets, index):
+        view_name = self.views_dropdown.itemText(index)
+        for widget in view_widgets.values():
+            widget.hide()
+        view_widgets[view_name].show()
+        self.ui.accessoryLayout.addWidget(view_widgets[view_name])
+
     def updateConnectionStatus(self, connected: bool):
         """ Updates the connection status label when connect status changes """
         if connected:
@@ -188,8 +228,6 @@ class Main(QtWidgets.QMainWindow):
         elif tcpconnected == 0:
             self.ui.writelbl.setStyleSheet("color: red; font: 18px bold;")
             self.ui.writelbl.setText("Disconnected")
-
-
 
     def updateBusLoad(self, load: float):
         """ Updates the bus load label """
