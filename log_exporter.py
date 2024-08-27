@@ -157,8 +157,13 @@ class LogExporter():
             self._write_row()
             self.cur_row_t += self.bin_ms / 1000.0
             self.row[0] = self.cur_row_t
-
-        self.row[col] = val
+        if type(val) == float or type(val) == int:
+            self.row[col] = val
+        else:
+            if np.isnan(val.value):
+                self.row[col] = ""
+            else:
+                self.row[col] = val.value
 
     def _parse_msg(self, msg:can.Message):
         if not msg.is_error_frame:
@@ -234,17 +239,17 @@ class LogExporter():
 p = "F:/"
 #p = "D:/2024_04_01_logs/in"
 p = "D:/Otterbein_04_06_2024/Evening"
-p = "E:\DT_test2"
+p = "C:/Users/Ruhaan Joshi/Downloads/log-2024-02-27--23-15-02"
 #p = "D:/log_recovery/test_in" 
 #p = "D:/log_recovery/ruhaan_driving/"
 #out_dir = "D:/log_recovery/test_out"
 #out_dir = "D:/2024_04_01_logs/out"
 #out_dir = "D:/Otterbein_4_5_24"
 out_dir = "D:/Otterbein_04_06_2024/Evening_parsed"
-out_dir = "D:/04_07_2024 DT Testing/DT2"
+out_dir = "C:/Users/Ruhaan Joshi/Downloads/ewbin"
 
 #dbc_dir = "D:/Downloads/per_dbc.dbc"
-dbc_dir = "C:/users/lukeo/Documents/firmware/common/daq/per_dbc.dbc"
+dbc_dir = "C:/Users/Ruhaan Joshi/Downloads/per_dbc.dbc"
 
 le = LogExporter(dbc_dir)
 
