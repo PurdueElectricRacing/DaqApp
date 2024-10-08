@@ -25,7 +25,7 @@ class CANBus:
         self.bus = None
         self.verbose = verbose
 
-    def connect(self):
+    def connect_gsusb(self):
         dev = usb.core.find(idVendor=0x1D50, idProduct=0x606F)
         bus = None
         if dev:
@@ -36,15 +36,42 @@ class CANBus:
             bus = can.ThreadSafeBus(bustype="gs_usb", channel=channel, bus=bus_num, address=addr, bitrate=500000, receive_own_messages=True)
             while(bus.recv(0)): pass
         self.bus = bus
-        self._logInfo("connected to usb")
+        self._logInfo("connected to gs_usb can")
         atexit.register(self.disconnect)
 
-    def disconnect(self):
+    def connect_socket(self):
+        # https://python-can.readthedocs.io/en/stable/interfaces/socketcan.html
+        # sudo ip link set can0 up type can bitrate 500000
+        bus = can.ThreadSafeBus(channel='can0', interface='socketcan', bitrate=500000, receive_own_messages=True)
+        while(bus.recv(0)): pass
+        self.bus = bus
+        self._logInfo("connected to socketcan")
+        atexit.register(self.disconnect)
+
+    def disconnect_gsusb(self):
         self.bus.shutdown()
         usb.util.dispose_resources(self.bus.gs_usb.gs_usb)
         del(self.bus)
         self.bus = None
         self._logInfo("disconnected from usb")
+
+    def disconnect_socket(self):
+        self.bus.shutdown()
+        del(self.bus)
+        self.bus = None
+        self._logInfo("disconnected from socketcan")
+
+    def connect(self):
+        if self.use_socket: # (bug in candlelight fw)
+            self.connect_socket()
+        else:
+            self.connect_gsusb()
+
+    def disconnect(self):
+        if self.use_socket:
+            self.disconnect_socket()
+        else:
+            self.disconnect_gsusb()
 
     def _logInfo(self, x):  # for compat
         print(f"LOG: {x}")
@@ -100,13 +127,14 @@ class CANBus:
         return self.bus
 
 class CANBootloader:
-    def __init__(self, canbus, node, verbose=False, dry_run=False):
+    def __init__(self, canbus, node, verbose=False, dry_run=False, use_socket=False):
         self.canbus = canbus
         self.db = self.canbus.db
         self.selected_node = node
         self.bl = BootloaderCommand(self.selected_node, self.db)
         self.verbose = verbose
         self.dry_run = dry_run
+        self.use_socket = use_socket
 
     def _logInfo(self, x): # for compat
         print(f"LOG: {x}")
@@ -321,6 +349,9 @@ if __name__ == "__main__":
     parser.add_argument('-d', "--dry-run", action='store_true',
         help="dry run (dont erase flash)",
     )
+    parser.add_argument('-s', "--socket", action='store_true',
+        help="use linux socket backend instead of gs_usb (linux only)",
+    )
 
     args = parser.parse_args()
     config = json.load(open(CONFIG_FILE_PATH))
@@ -331,7 +362,7 @@ if __name__ == "__main__":
     canbus = CANBus(config, verbose=args.verbose)
     canbus.connect()
 
-    cb = CANBootloader(canbus, node=node, verbose=args.verbose, dry_run=args.dry_run)
+    cb = CANBootloader(canbus, node=node, verbose=args.verbose, dry_run=args.dry_run, use_socket=args.socket)
     if (not args.test):
         cb.flash_firmware(path)
     else:
