@@ -25,12 +25,12 @@ def log_success(phrase):
     log(f"{bcolors.OKGREEN}{phrase}{bcolors.ENDC}")
 
 def log(phrase):
-    print(phrase) 
+    print(phrase)
 
 class LogExporter():
     """
     Exports a binary log files into csv files
-    Separate CSV files are created based on groupings 
+    Separate CSV files are created based on groupings
         of continuous time intervals
     """
     CAN_EFF_FLAG = 0x80000000
@@ -75,7 +75,7 @@ class LogExporter():
                 self.signal_to_col[bus] = {}
             if not node in self.signal_to_col[bus]:
                 self.signal_to_col[bus][node] = {}
-            
+
             self.signal_to_col[bus][node][msg] = {}
             for sig in msg_c.signals:
                 self.signal_to_col[bus][node][msg][sig.name] = col
@@ -118,7 +118,7 @@ class LogExporter():
     def _new_out_file(self):
         # Ensure if current row exists that we write it
         if not self.out_to_file: return
-        if (self.out_file != None): 
+        if (self.out_file != None):
             self._write_row()
             self.out_file.close()
         self.out_file = open(os.path.join(self.out_dir, f"out_{self.out_fil_cnt}.csv"), 'w')
@@ -204,7 +204,7 @@ class LogExporter():
         return sorted_items
 
     def parse_files(self, input_dir, output_dir, bus='Main', binning_ms=15, fill_empty_vals=True):
-        # Determine files in directory of type .log        
+        # Determine files in directory of type .log
         # The created file should contain info about which log files it contains
         if (input_dir == output_dir):
             log_error("Input dir == ouput dir!")
@@ -240,16 +240,19 @@ p = "F:/"
 #p = "D:/2024_04_01_logs/in"
 p = "D:/Otterbein_04_06_2024/Evening"
 p = "C:/Users/Ruhaan Joshi/Downloads/log-2024-02-27--23-15-02"
-#p = "D:/log_recovery/test_in" 
+p = "/media/eileen/A04D-8962"
+#p = "D:/log_recovery/test_in"
 #p = "D:/log_recovery/ruhaan_driving/"
 #out_dir = "D:/log_recovery/test_out"
 #out_dir = "D:/2024_04_01_logs/out"
 #out_dir = "D:/Otterbein_4_5_24"
 out_dir = "D:/Otterbein_04_06_2024/Evening_parsed"
 out_dir = "C:/Users/Ruhaan Joshi/Downloads/ewbin"
+out_dir = "out"
 
 #dbc_dir = "D:/Downloads/per_dbc.dbc"
 dbc_dir = "C:/Users/Ruhaan Joshi/Downloads/per_dbc.dbc"
+dbc_dir = "/home/eileen/per/firmware/common/daq/per_dbc.dbc"
 
 le = LogExporter(dbc_dir)
 
