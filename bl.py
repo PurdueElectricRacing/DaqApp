@@ -62,13 +62,13 @@ class CANBus:
         self._logInfo("disconnected from socketcan")
 
     def connect(self):
-        if 0: # (bug in candlelight fw)
+        if self.use_socket: # (bug in candlelight fw)
             self.connect_socket()
         else:
             self.connect_gsusb()
 
     def disconnect(self):
-        if 0:
+        if self.use_socket:
             self.disconnect_socket()
         else:
             self.disconnect_gsusb()
@@ -127,13 +127,14 @@ class CANBus:
         return self.bus
 
 class CANBootloader:
-    def __init__(self, canbus, node, verbose=False, dry_run=False):
+    def __init__(self, canbus, node, verbose=False, dry_run=False, use_socket=False):
         self.canbus = canbus
         self.db = self.canbus.db
         self.selected_node = node
         self.bl = BootloaderCommand(self.selected_node, self.db)
         self.verbose = verbose
         self.dry_run = dry_run
+        self.use_socket = use_socket
 
     def _logInfo(self, x): # for compat
         print(f"LOG: {x}")
@@ -349,6 +350,9 @@ if __name__ == "__main__":
     parser.add_argument('-d', "--dry-run", action='store_true',
         help="dry run (dont erase flash)",
     )
+    parser.add_argument('-s', "--socket", action='store_true',
+        help="use linux socket backend instead of gs_usb (linux only)",
+    )
 
     args = parser.parse_args()
     config = json.load(open(CONFIG_FILE_PATH))
@@ -359,7 +363,7 @@ if __name__ == "__main__":
     canbus = CANBus(config, verbose=args.verbose)
     canbus.connect()
 
-    cb = CANBootloader(canbus, node=node, verbose=args.verbose, dry_run=args.dry_run)
+    cb = CANBootloader(canbus, node=node, verbose=args.verbose, dry_run=args.dry_run, use_socket=args.socket)
     if (not args.test):
         cb.flash_firmware(path)
     else:
