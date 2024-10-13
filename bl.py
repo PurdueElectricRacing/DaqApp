@@ -77,7 +77,7 @@ class CANBus:
         print(f"LOG: {x}")
 
     # used to search for TX ack on RX line
-    def recv_tx(self, aid, aid2, timeout=BOOTLOADER_TIMEOUT):
+    def recv_tx(self, aid, timeout=BOOTLOADER_TIMEOUT):
         start = time.time()
         time_left = timeout
 
@@ -86,9 +86,9 @@ class CANBus:
             msg, already_filtered = self.bus._recv_internal(timeout=time_left)
 
             if (msg and self.verbose):
-                print(msg, hex(msg.arbitration_id), hex(aid), hex(aid2))
+                print(msg, hex(msg.arbitration_id), hex(aid))
             # could be both 0x404e23c or 0x409c43e (if error frame was echoed back)
-            if (msg and ((msg.arbitration_id == aid) or (msg.arbitration_id == aid2))):
+            if (msg and (msg.arbitration_id == aid)):
                 return msg
 
             # if not, and timeout is None, try indefinitely
@@ -105,7 +105,7 @@ class CANBus:
 
                 return None
 
-    def _send_msg(self, msg: can.Message, aid2):
+    def _send_msg(self, msg: can.Message):
         """ Sends a can message over the bus """
         if self.connected():
             #self._logInfo(f"TX: {self.tx_count:03d}: {msg}")
@@ -114,8 +114,8 @@ class CANBus:
             # Timestamp:        0.000000    ID: 0409c43e    X Rx                DL:  5    03 9c b2 92 ac
             # Timestamp:        4.830460    ID: 0409c43e    X Tx                DL:  5    03 9c b2 92 ac              Channel: canable gs_usb
             #assert(msg.data == msg2.data) # TODO better way to check this
-            msg2 = self.recv_tx(aid=msg.arbitration_id, aid2=aid2)
-            return msg2 and (msg.arbitration_id == msg2.arbitration_id or aid2 == msg2.arbitration_id)
+            msg2 = self.recv_tx(aid=msg.arbitration_id)
+            return msg2 and (msg.arbitration_id == msg2.arbitration_id)
         else:
             self._logInfo("Tried to send msg without connection")
             return False
@@ -139,9 +139,8 @@ class CANBootloader:
     def _logInfo(self, x): # for compat
         print(f"LOG: {x}")
 
-    def send_msg(self, msg, aid2=0):
-        aid2 = self.bl.RX_MSG.frame_id if not aid2 else aid2
-        if not self.canbus._send_msg(msg, aid2=aid2):
+    def send_msg(self, msg):
+        if not self.canbus._send_msg(msg):
             self._logInfo(f"failed to TX {msg}")
             return False
         return True
@@ -320,7 +319,7 @@ class CANBootloader:
         crc = self.crc_update(data2, crc)
 
         can_tx = self.bl.firmware_data_msg((data2 << 32) | data1)
-        self.send_msg(can_tx, aid2=0x400193e)
+        self.send_msg(can_tx)
         return crc
 
     # CRC-32b calculation
