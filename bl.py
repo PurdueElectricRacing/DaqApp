@@ -17,13 +17,14 @@ BOOTLOADER_TIMEOUT = 5.0
 CONFIG_FILE_PATH = os.path.join(os.getcwd(), "dashboard.json")
 
 class CANBus:
-    def __init__(self, config, verbose=False):
+    def __init__(self, config, verbose=False, use_socket=False):
         firmware_base = config['firmware_path']
         dbc_path = os.path.join(firmware_base, 'common/daq/per_dbc.dbc')
         db = cantools.database.load_file(dbc_path)
         self.db = db
         self.bus = None
         self.verbose = verbose
+        self.use_socket = use_socket
 
     def connect_gsusb(self):
         dev = usb.core.find(idVendor=0x1D50, idProduct=0x606F)
