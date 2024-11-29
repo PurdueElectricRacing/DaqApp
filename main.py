@@ -135,7 +135,7 @@ class Main(QtWidgets.QMainWindow):
         self.max_cols = 1
 
         # Menu Action Connections
-        self.ui.actionImport_log.triggered.connect(lambda : LogImporter.importLog(self.can_bus, self))
+        #self.ui.actionImport_log.triggered.connect(lambda : LogImporter.importLog(self.can_bus, self))
         self.ui.actionVariable_Editor.triggered.connect(lambda _visible: self.viewWidget(_visible, self.ui.varEdit))
         self.ui.actionFile_Viewer.triggered.connect(lambda _visible: self.viewWidget(_visible, self.ui.fileViewer))
         self.ui.actionFrame_Viewer.triggered.connect(lambda _visible: self.viewWidget(_visible, self.ui.frameViewer))
@@ -161,9 +161,9 @@ class Main(QtWidgets.QMainWindow):
                             'https://wiki.itap.purdue.edu/display/PER22/Data+Acquisition'))
 
         self.updateWriteConnectionStatus(0)
-        self.can_bus.connect()
-        self.can_bus.start()
-        # self.can_bus.reconnect()
+        #self.can_bus.connect()
+        #self.can_bus.start()
+        #self.can_bus.reconnect()
         self.show()
 
     def updateConnectionStatus(self, connected: bool):

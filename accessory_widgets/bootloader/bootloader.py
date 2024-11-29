@@ -23,7 +23,7 @@ class Bootloader(QtWidgets.QWidget):
                      "RESET_REASON_APP_WATCHDOG",
                      "RESET_REASON_POR",
                      "RESET_REASON_BAD_FIRMWARE"]
-    
+
     FLASH_STATE = {
         "WAIT_FOR_BL_MODE": 0,
         "WAIT_FOR_META_RESP": 1,
@@ -36,7 +36,7 @@ class Bootloader(QtWidgets.QWidget):
         self.ui = Ui_Bootloader()
         self.ui.setupUi(self)
 
-        self.bus = bus
+        #self.bus = bus
         self.ih = None # Intel Hex
 
         # Signal connections
@@ -44,8 +44,8 @@ class Bootloader(QtWidgets.QWidget):
         self.ui.fileBtn.clicked.connect(self.selectFile)
         self.ui.rstBtn.clicked.connect(self.requestReset)
         self.ui.flashBtn.clicked.connect(self.requestFlash)
-        self.bus.bl_msg_sig.connect(self.handleNewBlMsg)
-
+        #self.bus.bl_msg_sig.connect(self.handleNewBlMsg)
+        """
         self.segments = None
         self.total_bytes = 0
         self.total_double_words = 0
@@ -56,9 +56,9 @@ class Bootloader(QtWidgets.QWidget):
         self.flash_timeout_timer = QtCore.QTimer()
         self.flash_timeout_timer.timeout.connect(self.flashTimeout)
         self.flash_start_time = 0
-
-        self.flash_update_timer = QtCore.QTimer()
-        self.flash_update_timer.timeout.connect(self.flashTxUpdate)
+        """
+        #self.flash_update_timer = QtCore.QTimer()
+        #self.flash_update_timer.timeout.connect(self.flashTxUpdate)
 
         self.ui.indicators = []
         self.firmware_path = firmware_path
@@ -66,7 +66,7 @@ class Bootloader(QtWidgets.QWidget):
         self.bl = None
         self.calcNodes()
         self._logInfo(f"{len(self.bl_nodes)} bootloader nodes loaded")
-        self.flashReset(0)
+        #self.flashReset(0)
 
         self.ui.autoReloadCheckbox.stateChanged.connect(self.toggleAutoReload)
         self.autoReload = True
@@ -81,7 +81,7 @@ class Bootloader(QtWidgets.QWidget):
             if (node not in self.blacklist):
                 self.nodes.append(node)
                 self.addStatusIndicator(node)
-        
+
         # Determine which nodes are bootloader enabled
         self.bl_nodes = []
         self.ui.nodeSelector.clear()
@@ -95,7 +95,7 @@ class Bootloader(QtWidgets.QWidget):
         """ Updates the selected bootloader node """
         self.hex_loc = ""
         self.selected_node = self.bl_nodes[idx].lower()
-        self.bl = BootloaderCommand(self.selected_node, self.bus.db)
+        #self.bl = BootloaderCommand(self.selected_node, self.bus.db)
         # Try to find HEX file associated with node
         node_path = self.firmware_path + f"/output/{self.selected_node}/BL_{self.selected_node}.hex"
         self.verifyHex(node_path)
@@ -103,7 +103,7 @@ class Bootloader(QtWidgets.QWidget):
     def selectFile(self):
         selected, _ = QtWidgets.QFileDialog.getOpenFileName(self, filter="*.hex", directory=self.firmware_path)
         self.verifyHex(selected)
-    
+
     def verifyHex(self, path):
         if (path != "" and os.path.exists(path)):
             self.hex_loc = path
@@ -114,7 +114,7 @@ class Bootloader(QtWidgets.QWidget):
             self.segments = self.ih.segments()
 
             for seg in self.segments:
-                self._logInfo(f"Segment: 0x{seg[0]:02X} : 0x{seg[1]:02X}") 
+                self._logInfo(f"Segment: 0x{seg[0]:02X} : 0x{seg[1]:02X}")
             if (self.segments[0][0] < 0x8002000):
                 self.ui.currFileLbl.setText("Please select file")
                 self._logInfo(f"Invalid start address, ensure the hex is of type BL_ and starts at >= 0x8002000")
@@ -134,7 +134,7 @@ class Bootloader(QtWidgets.QWidget):
         msg = self.bl.firmware_rst_msg()
         self.bus.sendMsg(msg)
         self._logInfo(f"Reset {self.selected_node}")
-    
+
     def requestFlash(self):
         if (not self.bl): return
         if self.autoReload:
@@ -163,7 +163,7 @@ class Bootloader(QtWidgets.QWidget):
         indic.setCheckable(False)
         indic.setChecked(False)
         indic.setText(name)
-        self.ui.indicators.append(indic) 
+        self.ui.indicators.append(indic)
         self.ui.verticalLayout_3.insertWidget(len(self.ui.indicators), indic)
 
     def handleNewBlMsg(self, msg: can.Message):
@@ -179,7 +179,7 @@ class Bootloader(QtWidgets.QWidget):
                 self.flashRxUpdate(can_rx['cmd'], can_rx['data'])
             # self._logInfo(f"state: {self.flash_state}")
         # TODO: change status based on reset reason / waiting for command
-    
+
     def flashRxUpdate(self, cmd, data):
         """ Only called if message is from current node, and flash is active """
         if (cmd == self.bl.RX_CMD['BLSTAT_INVALID']):
@@ -239,7 +239,7 @@ class Bootloader(QtWidgets.QWidget):
                     self._logInfo("ERROR: Firmware download failed!!")
                     self.flashReset(0)
                 self._logInfo("Total time: %.2f seconds" % (time.time() - self.flash_start_time))
-    
+
     def flashTxUpdate(self):
         if (self.flash_active and self.flash_state == self.FLASH_STATE['STREAMING_DATA']):
             if (self.curr_addr < self.segments[0][1]):
@@ -253,7 +253,7 @@ class Bootloader(QtWidgets.QWidget):
                 self.flash_state = self.FLASH_STATE['WAIT_FOR_STATUS']
         else:
             self.flash_update_timer.stop() # triggered unexpectedly
-    
+
     def sendSegmentDoubleWord(self, addr):
         """ Only call if flash in progress """
         bin_arr = self.ih.tobinarray(start=addr, size=4)
@@ -269,7 +269,7 @@ class Bootloader(QtWidgets.QWidget):
 
         can_tx = self.bl.firmware_data_msg((data2 << 32) | data1)
         self.bus.sendMsg(can_tx)
-    
+
     def flashTimeout(self):
         if (self.flash_active):
             if (self.flash_state <= self.FLASH_STATE['WAIT_FOR_BL_MODE']):
