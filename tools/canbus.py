@@ -22,6 +22,7 @@ class CANBus:
         self.bus = None
         self.verbose = verbose
         self.use_socket = use_socket
+        self.logfn = print
 
     def connect_gsusb(self):
         dev = usb.core.find(idVendor=0x1D50, idProduct=0x606F)
@@ -72,9 +73,10 @@ class CANBus:
             self.disconnect_socket()
         else:
             self.disconnect_gsusb()
+        atexit.unregister(self.disconnect)
 
     def _logInfo(self, x):  # for compat
-        print(f"LOG: {x}")
+        self.logfn(f"LOG: {x}")
 
     # used to search for TX ack on RX line
     def recv_tx(self, aid, timeout=3.0):

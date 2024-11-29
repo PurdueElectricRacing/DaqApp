@@ -1,5 +1,5 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
-from accessory_widgets.bootloader.bootloader import Bootloader
+from accessory_widgets.bootloader import Bootloader
 from accessory_widgets.frame_viewer import FrameViewer
 from accessory_widgets.car_viewer import CarViewer
 from accessory_widgets.cell_viewer import CellViewer

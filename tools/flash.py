@@ -1,4 +1,6 @@
-
+import sys
+from os.path import dirname
+sys.path.append(dirname(__file__))
 import argparse
 import can
 from canbus import CANBus
@@ -32,77 +34,93 @@ def crc_update(data, prev):
         idx += 1
     return crc
 
-def firmware_flash(canbus, node, path):
-    txmsg = canbus.db.get_message_by_name(f"{node}_bl_cmd")
-    rxmsg = canbus.db.get_message_by_name(f"{node}_bl_resp")
-    bsmsg = canbus.db.get_message_by_name(f"bitstream_data")
+class CANBootloader:
+    def __init__(self, canbus):
+        self.canbus = canbus
 
-    ih = IntelHex()
-    ih.fromfile(path, format="hex")
-    segments = ih.segments()
+    def request_reset(self, node):
+        canbus = self.canbus
+        txmsg = canbus.db.get_message_by_name(f"{node}_bl_cmd")
+        rxmsg = canbus.db.get_message_by_name(f"{node}_bl_resp")
 
-    for i,(start_addr, end_addr) in enumerate(segments):
-        print(f"Segment[{i}]: 0x{start_addr:02X} : 0x{end_addr:02X}")
-        if (start_addr < 0x8002000):
-            raise RuntimeError(f"Invalid start address, ensure the hex is of type BL_ and starts at >= 0x8002000")
-
-    fw_total_padded_size = segments[-1][1] - segments[0][0]
-    print(f"fw_total_padded_size: 0x{fw_total_padded_size:X}")
-    fw_binarr = ih.tobinarray(start=segments[0][0], size=fw_total_padded_size)
-    assert(fw_total_padded_size == len(fw_binarr))
-    assert(len(fw_binarr) % 4 == 0)
-
-    tick = time.time()
-
-    # 1. enter bootloader mode
-    data = txmsg.encode({"cmd": BLCMD_RST, "data": fw_total_padded_size})
-    msg = can.Message(arbitration_id=txmsg.frame_id, data=data)
-    canbus.send_msg(msg)
-    #msg = canbus.receive_msg(rxmsg) # TODO boot status message
-    #print(msg)
-    tock = time.time()
-    print(tock - tick)
-
-    # 2. erase flash
-    data = txmsg.encode({"cmd": BLCMD_START, "data": fw_total_padded_size})
-    msg = can.Message(arbitration_id=txmsg.frame_id, data=data)
-    canbus.send_msg(msg)
-    msg = canbus.receive_msg(rxmsg)
-    print(msg)
-    assert(msg['cmd'] == BLSTAT_VALID and msg['data'] == fw_total_padded_size)
-    tock = time.time()
-    print(tock - tick)  # 4.161547660827637
-
-    # 3. send data
-    crc = 0xFFFFFFFF
-    for i in range(len(fw_binarr) // 4):
-        x = fw_binarr[i*4:(i+1)*4]
-        payload = sum([y << ((i*8)) for i,y in enumerate(x)])
-        #payload = x[3] << 24 | x[2] << 16 | x[1] << 8 | x[0]
-        data = payload << 16 | i & 0xffff
-        msg = can.Message(arbitration_id=bsmsg.frame_id, data=data.to_bytes(8, 'little'))
+        # 1. enter bootloader mode
+        data = txmsg.encode({"cmd": BLCMD_RST, "data": 0})
+        msg = can.Message(arbitration_id=txmsg.frame_id, data=data)
         canbus.send_msg(msg)
-        #msg = canbus.receive_msg(rxmsg)
+        #msg = canbus.receive_msg(rxmsg) # TODO boot status message
         #print(msg)
-        crc = crc_update(payload, crc)
-    print(hex(crc))
-    tock = time.time()
-    print(tock - tick) # 6.891172885894775
 
-    # 4. send CRC
-    data = txmsg.encode({"cmd": BLCMD_CRC, "data": crc})
-    msg = can.Message(arbitration_id=txmsg.frame_id, data=data)
-    canbus.send_msg(msg)
-    msg = canbus.receive_msg(rxmsg, timeout=15.0)
-    print(msg)
-    assert(msg['cmd'] == BLSTAT_VALID and msg['data'] == crc)
-    tock = time.time()
-    print(tock - tick)  # 8.122606992721558
+    def firmware_flash(self, node, path):
+        canbus = self.canbus
+        txmsg = canbus.db.get_message_by_name(f"{node}_bl_cmd")
+        rxmsg = canbus.db.get_message_by_name(f"{node}_bl_resp")
+        bsmsg = canbus.db.get_message_by_name(f"bitstream_data")
 
-    # 5. jump
-    data = txmsg.encode({"cmd": BLCMD_JUMP, "data": 0})
-    msg = can.Message(arbitration_id=txmsg.frame_id, data=data)
-    canbus.send_msg(msg)
+        ih = IntelHex()
+        ih.fromfile(path, format="hex")
+        segments = ih.segments()
+
+        for i,(start_addr, end_addr) in enumerate(segments):
+            print(f"Segment[{i}]: 0x{start_addr:02X} : 0x{end_addr:02X}")
+            if (start_addr < 0x8002000):
+                raise RuntimeError(f"Invalid start address, ensure the hex is of type BL_ and starts at >= 0x8002000")
+
+        fw_total_padded_size = segments[-1][1] - segments[0][0]
+        print(f"fw_total_padded_size: 0x{fw_total_padded_size:X}")
+        fw_binarr = ih.tobinarray(start=segments[0][0], size=fw_total_padded_size)
+        assert(fw_total_padded_size == len(fw_binarr))
+        assert(len(fw_binarr) % 4 == 0)
+
+        tick = time.time()
+
+        # 1. enter bootloader mode
+        data = txmsg.encode({"cmd": BLCMD_RST, "data": 0})
+        msg = can.Message(arbitration_id=txmsg.frame_id, data=data)
+        canbus.send_msg(msg)
+        #msg = canbus.receive_msg(rxmsg) # TODO boot status message
+        #print(msg)
+        tock = time.time()
+        print(tock - tick)  # 1.8404805660247803
+
+        # 2. erase flash
+        data = txmsg.encode({"cmd": BLCMD_START, "data": fw_total_padded_size})
+        msg = can.Message(arbitration_id=txmsg.frame_id, data=data)
+        canbus.send_msg(msg)
+        msg = canbus.receive_msg(rxmsg)
+        assert(msg['cmd'] == BLSTAT_VALID and msg['data'] == fw_total_padded_size)
+        tock = time.time()
+        print(tock - tick)  # 4.161547660827637
+
+        # 3. send data
+        crc = 0xFFFFFFFF
+        for i in range(len(fw_binarr) // 4):
+            x = fw_binarr[i*4:(i+1)*4]
+            payload = sum([y << ((i*8)) for i,y in enumerate(x)])
+            #payload = x[3] << 24 | x[2] << 16 | x[1] << 8 | x[0]
+            data = payload << 16 | i & 0xffff
+            msg = can.Message(arbitration_id=bsmsg.frame_id, data=data.to_bytes(8, 'little'))
+            canbus.send_msg(msg)
+            #msg = canbus.receive_msg(rxmsg)
+            #print(msg)
+            crc = crc_update(payload, crc)
+        tock = time.time()
+        print(tock - tick) # 4.531917333602905
+
+        # 4. send CRC
+        data = txmsg.encode({"cmd": BLCMD_CRC, "data": crc})
+        msg = can.Message(arbitration_id=txmsg.frame_id, data=data)
+        canbus.send_msg(msg)
+        msg = canbus.receive_msg(rxmsg, timeout=15.0)
+        print(msg)
+        assert(msg['cmd'] == BLSTAT_VALID and msg['data'] == crc)
+        tock = time.time()
+        print(tock - tick)  # 4.78332781791687
+
+        # 5. jump
+        data = txmsg.encode({"cmd": BLCMD_JUMP, "data": 0})
+        msg = can.Message(arbitration_id=txmsg.frame_id, data=data)
+        canbus.send_msg(msg)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -113,6 +131,9 @@ if __name__ == "__main__":
         help="verbose",
     )
     parser.add_argument('-s', "--socket", action='store_true',
+        help="use linux socket backend instead of gs_usb (linux only)",
+    )
+    parser.add_argument('-p', "--path", default="",
         help="use linux socket backend instead of gs_usb (linux only)",
     )
 
@@ -128,4 +149,6 @@ if __name__ == "__main__":
 
     canbus = CANBus(verbose=args.verbose, use_socket=args.socket)
     canbus.connect()
-    firmware_flash(canbus, node, path)
+    cb = CANBootloader(canbus)
+    cb.firmware_flash(node, path)
+    #firmware_flash(canbus, node, path)
