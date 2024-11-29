@@ -7,6 +7,7 @@ import time
 from datetime import datetime
 import struct
 from construct import *
+import os
 
 UART_FRAME_STARTCODE = 0xDEADBEEF
 UART_FRAME_SIZE = 8
@@ -29,7 +30,20 @@ class UARTGateway:
     def log(self, msg):
         print(f'UART: {msg}')
 
+    def select_device(self, dev_path):
+        if (not dev_path):
+            for i,p in enumerate(serial.tools.list_ports.comports()):
+                if (any(x in p.description.lower() for x in ["uart", "serial", "ttl"])):
+                    ug.log("Selected %s" % (str(p)))
+                    dev_path = p.device
+                    break
+        if (not dev_path):
+            self.list_devices()
+            raise RuntimeError("No serial port found. Specify path with --device {path}")
+        return dev_path
+
     def connect(self, dev_path, baud_rate):
+        dev_path = self.select_device(dev_path)
         dev = serial.Serial(dev_path, baud_rate) # uart baud
         if (not dev.is_open):
             raise RuntimeError("Failed to connect to %s" % (dev_path))
@@ -98,7 +112,7 @@ class UARTGateway:
         self.write_frame(frame)
 
         response = self.receive_frame()
-        assert(response.type == 0x20000000 | type & 0xffff)
+        assert(response.type == 0x10000000 | 1)
 
     def receive_frame(self):
         reply = b''
@@ -124,7 +138,7 @@ class UARTGateway:
             if (cmdin == UART_FRAME_STARTCODE):
                 frame_data = self.readfull(UartFrame.sizeof())
                 frame = UartFrame.parse(frame_data)
-                self.log("RX Frame: %s" % str(frame))
+                #self.log("RX Frame: %s" % str(frame))
                 return frame
 
 if __name__ == "__main__":
@@ -143,23 +157,12 @@ if __name__ == "__main__":
     ug = UARTGateway()
     if (args.list):
         ug.list_devices()
-    if (not args.device):
-        for i,p in enumerate(serial.tools.list_ports.comports()):
-            if (any(x in p.description.lower() for x in ["uart", "serial", "ttl"])):
-                ug.log("Selected %s" % (str(p)))
-                args.device = p.device
-                break
-    if (not args.device):
-        ug.list_devices()
-        raise RuntimeError("No serial port found. Specify path with --device {path}")
-
     ug.connect(args.device, args.baud)
     assert(ug.is_connected())
 
     if (args.receive):
         ug.receive()
     else:
-        data = 0xcafebabe
         ug.send_frame(UART_COMMAND_HEARTBEAT, data)
         ug.send_frame(UART_COMMAND_HELLOWORLD, data)
-        #ug.receive_timeout(1)  # message to terminal
+        ug.receive_timeout(1)  # message to terminal
