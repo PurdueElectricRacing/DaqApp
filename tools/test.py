@@ -63,3 +63,7 @@ if __name__ == "__main__":
     canbus.send_msg(can.Message(arbitration_id=txmsg.frame_id, data=data))
     data = txmsg.encode({"cmd": DAQ_BL_CMD_LOG_STATUS, "data": 0})
     canbus.send_msg(can.Message(arbitration_id=txmsg.frame_id, data=data))
+
+    #rxmsg = canbus.db.get_message_by_name(f"daq_response_MAIN_MODULE")
+    #msg = canbus.receive_msg(rxmsg)
+    #print(msg)
