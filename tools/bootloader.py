@@ -4,7 +4,7 @@ sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 
 import argparse
 import can
-from communication.common import DAQAppObject, dotdict
+from communication.common import DAQAppObject, dotdict, tempdir, cd
 from communication.canbus_backend import CANBusUSB, CANBusTCP
 import os
 import math
@@ -13,6 +13,9 @@ from tqdm import tqdm
 import time
 import json
 import random
+
+import tarfile
+import subprocess
 
 BLCMD_RST       = 0x5
 BLCMD_QUERY     = 0x10
@@ -37,6 +40,8 @@ BL_METADATA_MAGIC = 0xFEE1DEAD
 BL_PING_MAGIC     = 0xFEE2DEAD
 BL_FIRMWARE_NOT_VERIFIED = 0xffffffff
 BL_FIRMWARE_VERIFIED     = 0x00000000
+
+NODES = ["a_box", "daq", "dashboard", "main_module", "pdu"]
 
 class BootloaderMessage(dotdict):
 
@@ -250,6 +255,26 @@ class Bootloader(DAQAppObject):
         #firmware = struct.pack("<%dI" % (len(firmware)), *firmware)
         self.log(f"Delta: {time.time()-tick:.4f}: CRC matched! firmware {crc:08x} download success!")
 
+    def is_firmware_package(self, path):
+        return (path.endswith('.tar.gz'))
+
+    def flash_firmware_package(self, tarball_path, args):
+        if not (self.is_firmware_package(tarball_path)):
+            self.log(f"ERR: {tarball_path} is not firmware package")
+            return
+        self.log(f"Firmware package path: {tarball_path}")
+        with tempdir() as dirpath:
+            subprocess.run([f"cp {tarball_path} ."], shell=True)
+            tar = tarfile.open(os.path.join(os.curdir, tarball_path), "r:gz")
+            tar.extractall()
+            tar.close()
+            print(os.listdir())
+            for node in NODES:
+                print(node)
+                path = os.path.join(os.path.abspath(os.curdir), f"output/{node}/bl-backup-{node}.hex")
+                print(path)
+                #bl.flash_firmware(node, path, args)
+
 def map_node_names(name):
     name = name.lower()
     if (name == "main"): return "main_module"
@@ -295,11 +320,13 @@ if __name__ == "__main__":
     CONFIG_FILE_PATH = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', 'dashboard.json'))
     config = json.load(open(CONFIG_FILE_PATH))
     node = map_node_names(args.node)
+
     path = os.path.join(config['firmware_path'], "output", node, f"BL_{node}.hex") if not args.path else args.path
     #if (args.set_backup):
     #    path = "/home/eileen/per/data/BL_main_module_backup.hex"
     #path = "/home/eileen/per/firmware/output/main_module/BL_main_module.hex"
     #path = f"/home/eileen/per/firmware/output/{node}/BL_{node}.hex"
+    path = "/home/eileen/per/firmware/output/firmware-backup-2025-02-12-66ffd0b3.tar.gz"
     if (not (os.path.exists(path))):
         raise RuntimeError("Invalid firmware path: %s" % (path))
 
@@ -324,6 +351,9 @@ if __name__ == "__main__":
     elif (args.load_backup):
         bl.load_backup_firmware(node, args)
     else:
-        bl.flash_firmware(node, path, args)
+        if (bl.is_firmware_package(path)):
+            bl.flash_firmware_package(node, path, args)
+        else:
+            bl.flash_firmware(node, path, args)
 
     canbus.stop_thread()
