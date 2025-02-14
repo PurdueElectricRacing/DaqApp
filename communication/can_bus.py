@@ -15,6 +15,8 @@ import time
 import threading
 import numpy as np
 import math
+import random
+import struct
 
 
 class CanBus(QtCore.QThread):
@@ -22,6 +24,14 @@ class CanBus(QtCore.QThread):
     Handles sending and receiving can bus messages,
     tracks all degined signals (BusSignal)
     """
+    CAN_EFF_FLAG = 0x80000000
+    CAN_RTR_FLAG = 0x40000000
+    CAN_ERR_FLAG = 0x20000000
+
+    BUS_TYPE_USB = 0
+    BUS_TYPE_UDP = 1
+    BUS_TYPE_TCP = 2
+    BUS_TYPE_NUL = 3
 
     connect_sig = QtCore.pyqtSignal(bool)
     write_sig = QtCore.pyqtSignal(int)
@@ -44,6 +54,7 @@ class CanBus(QtCore.QThread):
         self.start_date_time_str = ""
         self.tcp = False
         self.tcpbus = None
+        self.connection_type = self.BUS_TYPE_NUL
 
         # Bus Load Estimation
         self.total_bits = 0
@@ -78,27 +89,39 @@ class CanBus(QtCore.QThread):
             while(self.bus.recv(0)): pass
             self.connected = True
             self.is_wireless = False
+            self.connection_type = self.BUS_TYPE_USB
             self.connect_sig.emit(self.connected)
             utils.log("Usb successful")
             return
 
         #USB Failed, trying UDP
-        utils.log("Trying UDP")
-        try:
-            self.bus = UDPBus(self.ip, self.port)
+        if 0:
+            utils.log("Trying UDP")
+            try:
+                self.bus = UDPBus(self.ip, self.port)
+                self.connected = True
+                self.is_wireless = True
+                # Empty buffer of old messages
+                time.sleep(3)
+                i=0
+                while(self.bus.recv(0)):
+                    i+=1
+                utils.log(f"cleared {i} from buffer")
+                utils.log_warning("This does not gurantee a connection. Please make sure Raspberry Pi is broadcasting.")
+                self.connection_type = self.BUS_TYPE_UDP
+                self.connect_sig.emit(self.connected)
+                return
+            except OSError as e:
+                utils.log(f"UDP connect error {e}")
+
+        if 1: # TODO add debug flag
+            utils.log("Adding fake CAN messages")
             self.connected = True
-            self.is_wireless = True
-            # Empty buffer of old messages
-            time.sleep(3)
-            i=0
-            while(self.bus.recv(0)):
-                i+=1
-            utils.log(f"cleared {i} from buffer")
-            utils.log_warning("This does not gurantee a connection. Please make sure Raspberry Pi is broadcasting.")
+            self.is_wireless = False
+            self.connection_type = self.BUS_TYPE_NUL
             self.connect_sig.emit(self.connected)
             return
-        except OSError as e:
-            utils.log(f"UDP connect error {e}")
+        #utils.log("Usb successful")
 
         # Usb failed, trying tcp
         # utils.log("Trying tcp")
@@ -132,6 +155,7 @@ class CanBus(QtCore.QThread):
         try:
             self.tcpbus = TCPBus(self.ip, self.port)
             self.connected_tcp = True
+            self.connection_type = self.BUS_TYPE_TCP
             # Empty buffer of old messages
             # time.sleep(3)
             i=0
@@ -185,8 +209,6 @@ class CanBus(QtCore.QThread):
         self.connected_disp = 0
         self.write_sig.emit(self.connected_disp)
 
-
-
     def disconnect_bus(self):
         self.connected = False
         self.connect_sig.emit(self.connected)
@@ -205,7 +227,6 @@ class CanBus(QtCore.QThread):
             self.tcpbus.shutdown(1)
             del(self.tcpbus)
             self.tcpbus = None
-
 
     def reconnect(self):
         """ destroy usb connection, attempt to reconnect """
@@ -312,7 +333,6 @@ class CanBus(QtCore.QThread):
         if self.ip:
             self.connect_tcp()
 
-
     def updateSignals(self, can_config: dict):
         """ Creates dictionary of BusSignals of all signals in can_config """
         utils.signals.clear()
@@ -327,6 +347,24 @@ class CanBus(QtCore.QThread):
                                     [msg['msg_name']][signal['sig_name']]\
                                     = BusSignal.fromCANMsg(signal, msg, node, bus)
 
+    def get_fake_message(self):
+        msgs = []
+        for msg_name in ["mod_cell_temp_avg", "mod_cell_temp_max", "mod_cell_temp_min"]:
+            can_msg = self.db.get_message_by_name(msg_name)
+            can_id = can_msg.frame_id
+            msg = can.Message(
+            timestamp = 0,
+            arbitration_id = can_id,
+            is_extended_id = True,
+            is_error_frame = bool(can_id & self.CAN_ERR_FLAG), #CAN_ERR_FLAG
+            is_remote_frame = bool(can_id & self.CAN_RTR_FLAG), #CAN_RTR_FLAG
+            dlc=8,
+            #data=b[13:13+dlc]
+            data=struct.pack("<Q", random.randint(0, 0xffff)),
+            )
+            msgs.append(msg)
+        return msgs
+
     def run(self):
         """ Thread loop to receive can messages """
         self.last_estimate_time = time.time()
@@ -334,15 +372,21 @@ class CanBus(QtCore.QThread):
         skips = 0
         avg_process_time = 0
 
-        #while self.connected:
-        while (not self.is_wireless or self.bus and self.bus._is_connected) and self.connected:
-            # TODO: detect when not connected (add with catching send error)
-            #       would the connected variable need to be locked?
-            msg = self.bus.recv(0.25)
+        while self.connected:
+            # Flood fake CAN messages on no connection (for development)
+            if (self.connection_type == self.BUS_TYPE_NUL):
+                msg = self.get_fake_message()
+            else: # not self.is_wireless or self.bus and self.bus._is_connected
+                msg = self.bus.recv(0.25)
+
             if msg:
                 delta = time.perf_counter()
                 if not self.is_importing:
-                    self.onMessageReceived(msg)
+                    if isinstance(msg, list) and len(msg):
+                        for m in msg:
+                            self.onMessageReceived(m)
+                    else:
+                        self.onMessageReceived(msg)
                 avg_process_time += time.perf_counter() - delta
             else:
                 skips += 1
@@ -358,9 +402,8 @@ class CanBus(QtCore.QThread):
                 loop_count = 0
                 avg_process_time = 0
                 skips = 0
-        #self.connect_sig.emit(self.connected and self.bus.is_connected)
+            time.sleep(0.05)
         if (self.connected and self.is_wireless): self.connect_sig.emit(self.bus and self.bus.is_connected)
-
 
 class BusSignal(QtCore.QObject):
     """ Signal that can be subscribed (connected) to for updates """
