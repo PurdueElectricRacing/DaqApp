@@ -13,7 +13,7 @@ def crc_update(data, prev):
         idx += 1
     return crc
 
-node = "daq"
+node = "torque_vector"
 path = f"/home/eileen/per/firmware/output/bootloaders/bootloader_{node}/BL_bootloader_{node}.hex"
 path = f"/home/eileen/per/firmware/output/{node}/BL_{node}.hex"
 print(path)
@@ -32,6 +32,7 @@ for i,(start_addr, end_addr) in enumerate(segments):
         print(hex(payload))
 
 fw_total_padded_size = segments[-1][1] - segments[0][0]
+print(f"size: 0x{fw_total_padded_size:08x}")
 fw_binarr = ih.tobinarray(start=segments[0][0], size=fw_total_padded_size)
 crc = 0xffffffff
 for i in range(fw_total_padded_size // 4):
