@@ -273,15 +273,22 @@ class Bootloader(DAQAppObject):
         self.log(f"Firmware package path: {tarball_path}")
         with tempdir() as dirpath:
             subprocess.run([f"cp {tarball_path} ."], shell=True)
-            tar = tarfile.open(os.path.join(os.curdir, tarball_path), "r:gz")
-            tar.extractall()
-            tar.close()
+            print(os.path.basename(tarball_path))
+            subprocess.run([f"tar -xzvf {os.path.join(dirpath, os.path.basename(tarball_path))}"], shell=True)
+            print(os.listdir())
+            for entry in os.scandir('.'):
+                if entry.is_file():
+                    print(entry.name)
+            #tar = tarfile.open(os.path.join(os.curdir, tarball_path), "r:gz")
+            #tar.extractall()
+            #tar.close()
             print(os.listdir())
             for node in NODES:
                 print(node)
-                path = os.path.join(os.path.abspath(os.curdir), f"output/{node}/bl-backup-{node}.hex")
+                path = os.path.join(os.path.abspath(os.curdir), f"output/{node}/BL_{node}.hex")
                 print(path)
-                #bl.flash_firmware(node, path, args)
+                if (node in ["a_box", "torque_vector", "dashboard"]): continue
+                self.flash_firmware(node, path, args)
 
 def map_node_names(name):
     name = name.lower()
@@ -335,6 +342,7 @@ if __name__ == "__main__":
     #path = "/home/eileen/per/firmware/output/main_module/BL_main_module.hex"
     #path = f"/home/eileen/per/firmware/output/{node}/BL_{node}.hex"
     #path = "/home/eileen/per/firmware/output/firmware-backup-2025-02-12-66ffd0b3.tar.gz"
+    path = "/home/eileen/per/firmware/output/firmware-2025-03-08-86aa21e8.tar.gz"
     if (not (os.path.exists(path))):
         raise RuntimeError("Invalid firmware path: %s" % (path))
 
@@ -360,7 +368,7 @@ if __name__ == "__main__":
         bl.load_backup_firmware(node, args)
     else:
         if (bl.is_firmware_package(path)):
-            bl.flash_firmware_package(node, path, args)
+            bl.flash_firmware_package(path, args)
         else:
             bl.flash_firmware(node, path, args)
 
