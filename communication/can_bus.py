@@ -28,11 +28,13 @@ class CanBus(QtCore.QThread):
     bus_load_sig = QtCore.pyqtSignal(float)
     new_msg_sig = QtCore.pyqtSignal(can.Message)
     daq_msg_sig = QtCore.pyqtSignal(can.Message)
+    uds_msg_sig = QtCore.pyqtSignal(can.Message)
     flt_msg_sig = QtCore.pyqtSignal(can.Message)
     bl_msg_sig = QtCore.pyqtSignal(can.Message)
 
     def __init__(self, dbc_path, default_ip, can_config: dict):
         super(CanBus, self).__init__()
+        #TODO: Basically we need to strip out the excess busses from can config in order to properly load the Db into the can bus.
         self.db = cantools.db.load_file(dbc_path)
 
         utils.log(f"CAN version: {can.__version__}")
@@ -73,6 +75,7 @@ class CanBus(QtCore.QThread):
             bus_num = dev.bus
             addr = dev.address
             del(dev)
+            #lmao
             self.bus = can.ThreadSafeBus(bustype="gs_usb", channel=channel, bus=bus_num, address=addr, bitrate=500000)
             # Empty buffer of old messages
             while(self.bus.recv(0)): pass
@@ -274,6 +277,7 @@ class CanBus(QtCore.QThread):
         msg.timestamp -= self.start_time_bus
         self.new_msg_sig.emit(msg)
         if (msg.arbitration_id >> 6) & 0xFFFFF == 0xFFFFF: self.daq_msg_sig.emit(msg) # Check if it could be daq
+        if (((msg.arbitration_id >> 12) & 0x1800F) == 0x18001): self.uds_msg_sig.emit(msg)
         if (msg.arbitration_id & (0x8c000) != 0): self.flt_msg_sig.emit(msg) # Check for HLP = 0
         if (msg.arbitration_id & 0x3F == 60): self.bl_msg_sig.emit(msg) # emit for bootloader
         if not msg.is_error_frame:
@@ -281,14 +285,16 @@ class CanBus(QtCore.QThread):
             try:
                 dbc_msg = self.db.get_message_by_frame_id(msg.arbitration_id)
                 decode = dbc_msg.decode(msg.data)
-                #print(dbc_msg.name)
+                # print(dbc_msg.name)
                 for sig in decode.keys():
                     sig_val = decode[sig]
                     if (type(sig_val) != str):
                         utils.signals[utils.b_str][dbc_msg.senders[0]][dbc_msg.name][sig].update(sig_val, msg.timestamp, not utils.logging_paused or self.is_importing)
+            # This keyerror is triggering
             except KeyError:
                 if dbc_msg and "daq" not in dbc_msg.name and "fault" not in dbc_msg.name:
-                    if utils.debug_mode: utils.log_warning(f"Unrecognized signal key for {msg}")
+                    # if utils.debug_mode: utils.log_warning(f"Unrecognized signal key for {msg}")
+                    pass
                 # elif "fault" not in dbc_msg.name:
                 #     if utils.debug_mode: utils.log_warning(f"unrecognized: {msg.arbitration_id}")
             except ValueError as e:
@@ -351,7 +357,7 @@ class CanBus(QtCore.QThread):
             # Bus load estimation
             if (time.time() - self.last_estimate_time) > 1:
                 self.last_estimate_time = time.time()
-                bus_load = self.total_bits / 500000.0 * 100
+                bus_load = self.total_bits / 250000.0 * 100
                 self.total_bits = 0
                 self.bus_load_sig.emit(bus_load)
                 # if loop_count != 0 and loop_count-skips != 0 and utils.debug_mode: print(f"rx period (ms): {1/loop_count*1000}, skipped: {skips}, process time (ms): {avg_process_time / (loop_count-skips)*1000}")
@@ -366,7 +372,7 @@ class BusSignal(QtCore.QObject):
     """ Signal that can be subscribed (connected) to for updates """
 
     update_sig = QtCore.pyqtSignal()
-    history = 500000#240000 # for 0.015s update period 1 hour of data
+    history = 250000#240000 # for 0.015s update period 1 hour of data
     data_lock = threading.Lock()
 
     def __init__(self, bus_name, node_name, msg_name, sig_name, dtype, store_dtype=None, unit="", msg_desc="", sig_desc="", msg_period=0):
