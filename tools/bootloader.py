@@ -17,21 +17,24 @@ import random
 import tarfile
 import subprocess
 
-BLCMD_PING     = 0x00
+BLCMD_PING      = 0x00
 BLCMD_START     = 0x01
 BLCMD_CRC       = 0x02
 BLCMD_DATA      = 0x03
 BLCMD_RST       = 0x05
 
-BLCMD_CONFIGURE = 0x08
-BLCMD_DOWNLOAD  = 0x05
+BLCMD_STAT      = 0x08
+BLCMD_BACKUP    = 0x09
 
-BLERROR_NONE = 0
-BLERROR_CRC = 1
+BLERROR_NONE  = 0
+BLERROR_CRC   = 1
 BLERROR_FLASH = 2
-BLERROR_SIZE = 3
-BLERROR_META = 4
+BLERROR_SIZE  = 3
+BLERROR_META  = 4
 BLERROR_UNKNOWN = 5
+
+BLSTAT_VALID        = 0
+BLSTAT_BOOT         = 4
 
 BL_BANK_A = 0xAAAA
 BL_BANK_B = 0xBBBB
@@ -46,8 +49,8 @@ NODES = ["a_box", "daq", "dashboard", "main_module", "pdu"]
 
 class BootloaderMessage(dotdict):
     def check_response(self, cmd, data=0):
-        if ((data and self.data != data)):
-        #if ((self.cmd != cmd) or (data and self.data != data)):
+        #if ((data and self.data != data)):
+        if ((self.cmd != cmd) or (data and self.data != data)):
             print(f"ERR: msg: {self}")
             raise ValueError("Failed to check response")
         return
@@ -84,8 +87,7 @@ class Bootloader(DAQAppObject):
     def receive(self, node, cmd, **kwargs):
         canbus = self.canbus
         msg = canbus.receive_uds_frame(node=node, cmd=cmd, **kwargs)
-        #blmsg = BootloaderMessage({"cmd":msg.cmd, "err": msg.data & 0xff, "data":msg.data >> 8, "data_raw":msg.data})
-        blmsg = BootloaderMessage({"cmd":msg.cmd, "data":msg.data})
+        blmsg = BootloaderMessage({"cmd":msg.cmd, "err": msg.data & 0xff, "data":msg.data >> 8, "data_raw":msg.data})
         return blmsg
 
     def reset_node(self, node, args):
@@ -129,7 +131,7 @@ class Bootloader(DAQAppObject):
         if (not args.in_place):
             self.reset_node(node, args)
             msg = self.receive(node, 0, timeout=1.0)
-            msg.check_response(0x04, BL_PING_MAGIC)
+            msg.check_response(0, 0xFEE2DEAD)
 
         # 1. Ping to enter bootloader mode
         canbus.send_uds_frame(node, cmd=BLCMD_PING, data=0)
@@ -146,11 +148,11 @@ class Bootloader(DAQAppObject):
         if (not self.enter_bootloader_mode(node, args)): return False
         # prints contents of metadata bank/bootmanager: addr, words, checksum, verified
         for bank in [BL_BANK_B, BL_BANK_C]:
-            canbus.send_uds_frame(node, BLCMD_PING, data=bank)
+            canbus.send_uds_frame(node, BLCMD_STAT, data=bank)
             meta = []
             for n in range(4): # 2x: one for main manager, the second for backup manager
-                msg = self.receive(node, BLCMD_PING, timeout=1.0)
-                msg.check_response(BLCMD_PING)
+                msg = self.receive(node, BLCMD_STAT, timeout=1.0)
+                msg.check_response(BLCMD_STAT)
                 meta.append(msg.data)
                 #print(msg)
             self.log("-"*22)
@@ -169,9 +171,9 @@ class Bootloader(DAQAppObject):
     def load_backup_firmware(self, node, args):
         if (not self.enter_bootloader_mode(node, args)): return False
         canbus = self.canbus
-        canbus.send_uds_frame(node, BLCMD_CONFIGURE, data=BL_BANK_C)
-        msg = self.receive(node, BLCMD_CONFIGURE, timeout=5.0)
-        msg.check_response(BLCMD_CONFIGURE)
+        canbus.send_uds_frame(node, BLCMD_BACKUP, data=BL_BANK_C)
+        msg = self.receive(node, BLCMD_BACKUP, timeout=5.0)
+        msg.check_response(BLCMD_BACKUP) # TODO error
         self.log("Configured to load backup firmware on next boot")
         self.log("Resetting to force boot backup firmware...")
         self.reset_node(node, args)
@@ -205,7 +207,7 @@ class Bootloader(DAQAppObject):
         wc = fw_total_padded_size // 4
         data = wc & 0xffff | ((0 & 0xffff) << 16)
         canbus.send_uds_frame(node, BLCMD_START, data=data)
-        msg = self.receive(node, 0, timeout=15.0)
+        msg = self.receive(node, BLCMD_START, timeout=15.0)
         msg.check_response(BLCMD_START, wc)
         self.log("Delta: %.4f: Erased flash size 0x%x" % (time.time()-tick, wc << 2))
 
@@ -219,8 +221,8 @@ class Bootloader(DAQAppObject):
             data = payload << 16 | i & 0xffff
             try:
                 canbus.send_uds_frame(node, BLCMD_DATA, data=data)
-                msg = self.receive(node, 0, timeout=5.0)
-                msg.check_response(0, 6)
+                msg = self.receive(node, BLCMD_DATA, timeout=5.0)
+                msg.check_response(BLCMD_DATA, 6)
             except TimeoutError:
                 self.log("error")
                 self.log(i)
@@ -234,7 +236,7 @@ class Bootloader(DAQAppObject):
         flags = BL_BANK_C if args.set_backup else BL_BANK_B
         data = (crc & 0xffffffff) | (flags & 0xffff) << 32
         canbus.send_uds_frame(node, BLCMD_CRC, data=data)
-        msg = self.receive(node, 0, timeout=5.0)
+        msg = self.receive(node, BLCMD_CRC, timeout=5.0)
         msg.check_response(BLCMD_CRC, crc)
         self.log("Delta: %.4f: Verified CRC checksum 0x%x" % (time.time()-tick, crc))
 
