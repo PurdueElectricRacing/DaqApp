@@ -17,7 +17,7 @@ import random
 import tarfile
 import subprocess
 
-BLCMD_QUERY     = 0x00
+BLCMD_PING     = 0x00
 BLCMD_START     = 0x01
 BLCMD_CRC       = 0x02
 BLCMD_DATA      = 0x03
@@ -109,8 +109,8 @@ class Bootloader(DAQAppObject):
 
     def is_bootloader_loaded(self, node, args):
         canbus = self.canbus
-        canbus.send_uds_frame(node, BLCMD_QUERY, data=0)
-        msg = self.receive(node, BLCMD_QUERY, timeout=1.0)
+        canbus.send_uds_frame(node, BLCMD_PING, data=0)
+        msg = self.receive(node, BLCMD_PING, timeout=1.0)
         if (msg.data == 0xDEADBEEF):
             self.log("Query: Bootloader is NOT loaded")
         elif (msg.data == BL_METADATA_MAGIC):
@@ -132,10 +132,10 @@ class Bootloader(DAQAppObject):
             msg.check_response(0x04, BL_PING_MAGIC)
 
         # 1. Ping to enter bootloader mode
-        canbus.send_uds_frame(node, cmd=BLCMD_QUERY, data=0)
-        msg = self.receive(node, BLCMD_QUERY, timeout=1.0)
+        canbus.send_uds_frame(node, cmd=BLCMD_PING, data=0)
+        msg = self.receive(node, BLCMD_PING, timeout=1.0)
         print(msg)
-        msg.check_response(BLCMD_QUERY, BL_METADATA_MAGIC)
+        msg.check_response(BLCMD_PING, BL_METADATA_MAGIC)
         if (not args.in_place):
             self.log("Pong! Entered bootloader mode!")
         else:
@@ -146,11 +146,11 @@ class Bootloader(DAQAppObject):
         if (not self.enter_bootloader_mode(node, args)): return False
         # prints contents of metadata bank/bootmanager: addr, words, checksum, verified
         for bank in [BL_BANK_B, BL_BANK_C]:
-            canbus.send_uds_frame(node, BLCMD_QUERY, data=bank)
+            canbus.send_uds_frame(node, BLCMD_PING, data=bank)
             meta = []
             for n in range(4): # 2x: one for main manager, the second for backup manager
-                msg = self.receive(node, BLCMD_QUERY, timeout=1.0)
-                msg.check_response(BLCMD_QUERY)
+                msg = self.receive(node, BLCMD_PING, timeout=1.0)
+                msg.check_response(BLCMD_PING)
                 meta.append(msg.data)
                 #print(msg)
             self.log("-"*22)
