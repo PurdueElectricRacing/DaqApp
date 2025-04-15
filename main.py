@@ -59,7 +59,8 @@ class Main(QtWidgets.QMainWindow):
         self.fault_config = DaqProtocol.create_ids(self, self.fault_config)
 
         # Can Bus Initialization
-        self.can_bus = CanBus(os.path.join(firmware_base, 'common/daq/per_dbc.dbc'), config['default_ip'], self.can_config)
+        # Default to the VCAN DBC, but this will be configurable.
+        self.can_bus = CanBus(os.path.join(firmware_base, 'common/daq/per_dbc_VCAN.dbc'), config['default_ip'], self.can_config, firmware_base)
         self.can_bus.connect_sig.connect(self.updateConnectionStatus)
         self.can_bus.write_sig.connect(self.updateWriteConnectionStatus)
         self.can_bus.bus_load_sig.connect(self.updateBusLoad)
@@ -168,7 +169,7 @@ class Main(QtWidgets.QMainWindow):
         self.ui.actionLoad_View.triggered.connect(self.loadView)
         self.ui.actionSave_View.triggered.connect(self.saveView)
         self.ui.actionPreferences.triggered.connect(lambda : PreferencesEditor.editPreferences(self.ui.varEdit, parent=self))
-        self.ui.actionSelect_CAN_Bus.triggered.connect(lambda: CanBusSelector(self.can_config))
+        self.ui.actionSelect_CAN_Bus.triggered.connect(lambda: CanBusSelector(self, self.can_config))
         self.ui.actionPlayPause.triggered.connect(self.playPause)
         self.ui.actionClear.triggered.connect(self.clearData)
         self.ui.actionReconnect.triggered.connect(self.can_bus.reconnect)

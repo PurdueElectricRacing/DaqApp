@@ -30,8 +30,8 @@ class FrameViewer(QtWidgets.QWidget):
         header.setSectionResizeMode(6, QtWidgets.QHeaderView.Stretch)
 
         # Configure Vertical Headers
-        self.ui.msgTable.verticalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
         self.ui.msgTable.verticalHeader().sectionDoubleClicked.connect(self.removeRow)
+        self.ui.msgTable.verticalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
 
         # Disable ability to edit cells
         self.ui.msgTable.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
@@ -63,6 +63,8 @@ class FrameViewer(QtWidgets.QWidget):
                 for idx, sig in enumerate(decode_msg):
                     if (type(decode_msg[sig]) == str):
                         data += str(sig)+": "+decode_msg[sig]+" "+(dbc_msg.signals[idx].unit if dbc_msg.signals[idx].unit else "")+", "
+                    elif (dbc_msg.name == 'uds_command_daq'):
+                        data = hex(int.from_bytes(msg.data, "big"))
                     else:
                         data += str(sig)+": "+"{:.3f}".format(decode_msg[sig])+" "+(dbc_msg.signals[idx].unit if dbc_msg.signals[idx].unit else "")+", "
             except ValueError as e:
@@ -81,7 +83,7 @@ class FrameViewer(QtWidgets.QWidget):
                 self.row_dlcs.append(msg.dlc)
                 self.row_data.append(data)
                 self.ui.msgTable.setRowCount(len(self.row_ids))
-                
+
                 # update row contents that do not change for a message once
                 self.ui.msgTable.setItem(len(self.row_ids) - 1, 1, QtWidgets.QTableWidgetItem("Rx" if msg.is_rx else "Tx"))
                 self.ui.msgTable.setItem(len(self.row_ids) - 1, 2, QtWidgets.QTableWidgetItem(hex(msg.arbitration_id)))
