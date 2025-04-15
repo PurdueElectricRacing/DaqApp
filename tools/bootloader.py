@@ -344,7 +344,7 @@ if __name__ == "__main__":
     #path = "/home/eileen/per/firmware/output/main_module/BL_main_module.hex"
     #path = f"/home/eileen/per/firmware/output/{node}/BL_{node}.hex"
     #path = "/home/eileen/per/firmware/output/firmware-backup-2025-02-12-66ffd0b3.tar.gz"
-    path = "/home/eileen/per/firmware/output/firmware-2025-03-08-86aa21e8.tar.gz"
+    #path = "/home/eileen/per/firmware/output/firmware-2025-03-08-86aa21e8.tar.gz"
     if (not (os.path.exists(path))):
         raise RuntimeError("Invalid firmware path: %s" % (path))
 

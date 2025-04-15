@@ -58,7 +58,7 @@ class CANBusBase(DAQAppObject):
     def __init__(self, parent=None, verbose=False):
         super(CANBusBase, self).__init__(verbose)
         self.parent = parent
-        self.db = cantools.db.load_file("/home/eileen/per/firmware/common/daq/per_dbc.dbc")
+        self.db = cantools.db.load_file("/home/eileen/per/firmware/common/daq/per_dbc_VCAN.dbc")
         self.connection_type = 0
         self.rx_buffer = Queue()
         self.listener = StoppableThread(target=self.poll)
