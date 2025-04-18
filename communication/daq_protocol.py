@@ -154,9 +154,8 @@ class DaqProtocol(QtCore.QObject):
         utils.daqProt = self
 
     def readVar(self, var: DAQVariable):
-        ccan = "CCAN"
         """ Requests to read a variable, expects a reply """
-        dbc_msg = self.can_bus.db.get_message_by_name(f"daq_command_{var.node_name.upper()}_{ccan}")
+        dbc_msg = self.can_bus.db.get_message_by_name(f"daq_command_{var.node_name.upper()}_{var.bus_name.upper()}")
         print(dbc_msg)
         data = [((var.id & DAQ_ID_MASK) << DAQ_CMD_LENGTH) | DAQ_CMD_READ]
         self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id,
@@ -166,7 +165,7 @@ class DaqProtocol(QtCore.QObject):
     def writeVar(self, var: DAQVariable, new_val):
         """ Writes to a variable """
         ccan = "CCAN"
-        dbc_msg = self.can_bus.db.get_message_by_name(f"daq_command_{var.node_name.upper()}_{ccan}")
+        dbc_msg = self.can_bus.db.get_message_by_name(f"daq_command_{var.node_name.upper()}_{var.bus_name.upper()}")
         data = [((var.id & DAQ_ID_MASK) << DAQ_CMD_LENGTH) | DAQ_CMD_WRITE]
         bytes = var.reverseToBytes(new_val)
         # LSB, add variable data to byte array

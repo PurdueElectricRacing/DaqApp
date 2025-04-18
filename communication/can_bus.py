@@ -35,7 +35,6 @@ class CanBus(QtCore.QThread):
 
     def __init__(self, dbc_path, default_ip, can_config: dict, fw_base, bus_idx: int=0):
         super(CanBus, self).__init__()
-        #TODO: Basically we need to strip out the excess busses from can config in order to properly load the Db into the can bus.
         self.db = cantools.db.load_file(dbc_path)
         self.dbc_path = dbc_path
 
@@ -211,6 +210,7 @@ class CanBus(QtCore.QThread):
       self.bus_idx = bus_idx
       bus_name = self.can_config['busses'][self.bus_idx]['bus_name']
       utils.log_warning(f'Loading common/daq/per_dbc_{bus_name}.dbc')
+      utils.b_str = bus_name
       self.db = cantools.db.load_file(os.path.join(self.fw_base, f'common/daq/per_dbc_{bus_name}.dbc'))
       self.reconnect()
 

@@ -118,6 +118,7 @@ class Main(QtWidgets.QMainWindow):
         self.ui.accessoryLayoutWidget = QtWidgets.QWidget()
         self.ui.accessoryLayoutWidget.setLayout(self.ui.accessoryLayout)
 
+        # Make sure to add any new widgets in the refreshWidgets() method as well.
         self.ui.varEdit = VariableEditor(self.daq_protocol)
         self.ui.fileViewer = FileViewer()
         self.ui.frameViewer = FrameViewer(self.can_bus, self.ui.centralwidget)
@@ -219,6 +220,36 @@ class Main(QtWidgets.QMainWindow):
         else:
             self.ui.accessoryLayout.removeWidget(widget)
             widget.hide()
+
+    def refreshWidgets(self):
+        # Re initialize widgets with the correct can bus settings
+        self.ui.varEdit = VariableEditor(self.daq_protocol)
+        self.ui.frameViewer = FrameViewer(self.can_bus, self.ui.centralwidget)
+        self.ui.cellViewer  = CellViewer(self.can_bus)
+        self.ui.logExporter = LogExporter(self.can_bus)
+        self.ui.bootloader  = Bootloader(self.can_bus, config['firmware_path'])
+        self.ui.chargeViewer  = ChargeViewer(self.can_bus)
+        self.ui.faultViewer = FaultViewer(self.can_bus, self.fault_config, self.daq_protocol)
+        self.ui.sensorViewer = SensorViewer(self.can_bus)
+        self.ui.systemMonitor = SystemMonitor(self.can_bus)
+        self.ui.motorViewer = MotorViewer(self.can_bus)
+        self.ui.carViewer = CarViewer(self.can_bus)
+
+        # All the widgets being displayed are now outdated so clear them
+        for i in reversed(range(self.ui.accessoryLayout.count())):
+          widget = self.ui.accessoryLayout.itemAt(i).widget()
+          self.viewWidget(False, widget=widget)
+          widget.setParent(None)
+
+        # Clear out any previously selected action
+        for action in self.ui.menuView.actions():
+          action.setChecked(False)
+
+        # Only set frame viewer to checked since that is active
+        self.ui.actionFrame_Viewer.setChecked(True)
+
+        # Default to frame viewer to see if your widget refresh looks good
+        self.ui.accessoryLayout.addWidget(self.ui.frameViewer)
 
     def newLCD(self):
         """ Adds a new LCD dashboard widget """

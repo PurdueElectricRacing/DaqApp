@@ -32,7 +32,6 @@ class VariableEditor(QtWidgets.QWidget):
         self.ui.loadButton.setDisabled(True)
         self.ui.startPubButton.setDisabled(True)
         self.ui.stopPubButton.setDisabled(True)
-
         # Add nodes to node selector
         self.updateNodeList()
 

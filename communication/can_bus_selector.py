@@ -31,11 +31,13 @@ class CanBusSelector(QtWidgets.QDialog):
         if bus_option.isChecked():
           selected_bus = bus_option.text()
           selected_idx = idx
-          print(f"Bus: {selected_bus}, idx: {selected_idx}")
+          utils.log_success(f"Bus: {selected_bus}, idx: {selected_idx}")
       if 'selected_bus' not in locals():
-          print("No bus selected fkn loser")
+          utils.log_error("No CAN bus selected")
           return
       self.instance.can_bus.swap_bus(selected_idx)
+      # Now refresh all pages to have the correct CAN bus
+      self.instance.refreshWidgets()
 
       super().accept()
 
@@ -50,10 +52,3 @@ class CanBusSelector(QtWidgets.QDialog):
         bus_option.setText(name)
         self.bus_options.append(bus_option)
         self.ui.verticalLayout.insertWidget(len(self.bus_options), bus_option)
-
-
-  # @staticmethod
-  # def setupCanBus(parent=None):
-  #     """ Used to edit the preferences (opens dialog) """
-  #     CANBusSelector = CanBusSelector(parent=parent)
-  #     CANBusSelector.exec_()
