@@ -9,7 +9,7 @@ usb() {
 # udp
 udp() {
     ip addr add 192.168.10.1/24 dev eth0
-    #ifconfig eth0 192.168.10.255 netmask 255.255.255.0
+    ifconfig eth0 192.168.10.255 netmask 255.255.255.0
 }
 
 tcp() {
