@@ -15,6 +15,7 @@ import time
 import threading
 import numpy as np
 import math
+import os
 
 
 class CanBus(QtCore.QThread):
@@ -28,22 +29,26 @@ class CanBus(QtCore.QThread):
     bus_load_sig = QtCore.pyqtSignal(float)
     new_msg_sig = QtCore.pyqtSignal(can.Message)
     daq_msg_sig = QtCore.pyqtSignal(can.Message)
+    uds_msg_sig = QtCore.pyqtSignal(can.Message)
     flt_msg_sig = QtCore.pyqtSignal(can.Message)
     bl_msg_sig = QtCore.pyqtSignal(can.Message)
 
-    def __init__(self, dbc_path, default_ip, can_config: dict):
+    def __init__(self, dbc_path, default_ip, can_config: dict, fw_base, bus_idx: int=0):
         super(CanBus, self).__init__()
         self.db = cantools.db.load_file(dbc_path)
+        self.dbc_path = dbc_path
 
         utils.log(f"CAN version: {can.__version__}")
         utils.log(f"gs_usb version: {gs_usb.__version__}")
 
         self.connected = False
         self.bus = None
+        self.bus_idx = bus_idx
         self.start_time_bus = -1
         self.start_date_time_str = ""
         self.tcp = False
         self.tcpbus = None
+        self.fw_base = fw_base
 
         # Bus Load Estimation
         self.total_bits = 0
@@ -66,6 +71,7 @@ class CanBus(QtCore.QThread):
     def connect(self):
         """ Connects to the bus """
         utils.log("Trying usb")
+        utils.log(f"Initializing CAN for bus: {self.can_config['busses'][self.bus_idx]['bus_name']}")
         # Attempt usb connection first
         dev = usb.core.find(idVendor=0x1D50, idProduct=0x606F)
         if dev:
@@ -73,7 +79,9 @@ class CanBus(QtCore.QThread):
             bus_num = dev.bus
             addr = dev.address
             del(dev)
-            self.bus = can.ThreadSafeBus(bustype="gs_usb", channel=channel, bus=bus_num, address=addr, bitrate=500000)
+            bus_speed = self.can_config['busses'][self.bus_idx]['bus_speed']
+            utils.log(f"Configured bus speed: {bus_speed}")
+            self.bus = can.ThreadSafeBus(bustype="gs_usb", channel=channel, bus=bus_num, address=addr, bitrate=bus_speed)
             # Empty buffer of old messages
             while(self.bus.recv(0)): pass
             self.connected = True
@@ -198,6 +206,14 @@ class CanBus(QtCore.QThread):
             del(self.bus)
             self.bus = None
 
+    def swap_bus(self, bus_idx):
+      self.bus_idx = bus_idx
+      bus_name = self.can_config['busses'][self.bus_idx]['bus_name']
+      utils.log_warning(f'Loading common/daq/per_dbc_{bus_name}.dbc')
+      utils.b_str = bus_name
+      self.db = cantools.db.load_file(os.path.join(self.fw_base, f'common/daq/per_dbc_{bus_name}.dbc'))
+      self.reconnect()
+
     def disconnect_tcp(self):
         self.connected_disp = 0
         self.write_sig.emit(self.connected_disp)
@@ -274,6 +290,7 @@ class CanBus(QtCore.QThread):
         msg.timestamp -= self.start_time_bus
         self.new_msg_sig.emit(msg)
         if (msg.arbitration_id >> 6) & 0xFFFFF == 0xFFFFF: self.daq_msg_sig.emit(msg) # Check if it could be daq
+        if (((msg.arbitration_id >> 12) & 0x1800F) == 0x18001): self.uds_msg_sig.emit(msg)
         if (msg.arbitration_id & (0x8c000) != 0): self.flt_msg_sig.emit(msg) # Check for HLP = 0
         if (msg.arbitration_id & 0x3F == 60): self.bl_msg_sig.emit(msg) # emit for bootloader
         if not msg.is_error_frame:
@@ -281,11 +298,12 @@ class CanBus(QtCore.QThread):
             try:
                 dbc_msg = self.db.get_message_by_frame_id(msg.arbitration_id)
                 decode = dbc_msg.decode(msg.data)
-                #print(dbc_msg.name)
+                # print(dbc_msg.name)
                 for sig in decode.keys():
                     sig_val = decode[sig]
                     if (type(sig_val) != str):
                         utils.signals[utils.b_str][dbc_msg.senders[0]][dbc_msg.name][sig].update(sig_val, msg.timestamp, not utils.logging_paused or self.is_importing)
+            # This keyerror is triggering
             except KeyError:
                 if dbc_msg and "daq" not in dbc_msg.name and "fault" not in dbc_msg.name:
                     if utils.debug_mode: utils.log_warning(f"Unrecognized signal key for {msg}")
@@ -351,7 +369,7 @@ class CanBus(QtCore.QThread):
             # Bus load estimation
             if (time.time() - self.last_estimate_time) > 1:
                 self.last_estimate_time = time.time()
-                bus_load = self.total_bits / 500000.0 * 100
+                bus_load = self.total_bits / self.can_config['busses'][self.bus_idx]['bus_speed'] * 100.0
                 self.total_bits = 0
                 self.bus_load_sig.emit(bus_load)
                 # if loop_count != 0 and loop_count-skips != 0 and utils.debug_mode: print(f"rx period (ms): {1/loop_count*1000}, skipped: {skips}, process time (ms): {avg_process_time / (loop_count-skips)*1000}")

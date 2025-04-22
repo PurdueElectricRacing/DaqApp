@@ -15,17 +15,22 @@ from accessory_widgets.sensor_viewer import SensorViewer
 from accessory_widgets.system_monitor import SystemMonitor
 from display_widgets.plot_widget import PlotWidget
 from display_widgets import plot_widget
+from communication.can_bus_selector import CanBusSelector
 from communication.can_bus import CanBus
 from communication.daq_protocol import DaqProtocol
+from communication.time_sync_status import TimeSyncStatus
 from display_widgets.lcd_widget import LcdDisplay
 from display_widgets.widget_deleter import WidgetDeleter
 from ui.mainWindow import Ui_MainWindow
+import datetime as dt
 import webbrowser
 import qdarkstyle
+import threading
 import utils
 import json
 import time
 import sys
+import can
 import os
 
 # File location changes when converted to exe
@@ -37,6 +42,8 @@ else:
 CONFIG_FILE_PATH = os.path.join(os.getcwd(), "dashboard.json")
 
 class Main(QtWidgets.QMainWindow):
+
+    timeEventTimedOut = QtCore.pyqtSignal()
 
     def __init__(self, config):
         super(Main, self).__init__()
@@ -52,11 +59,16 @@ class Main(QtWidgets.QMainWindow):
         self.fault_config = DaqProtocol.create_ids(self, self.fault_config)
 
         # Can Bus Initialization
-        self.can_bus = CanBus(os.path.join(firmware_base, 'common/daq/per_dbc.dbc'), config['default_ip'], self.can_config)
+        # Default to the VCAN DBC, but this will be configurable.
+        self.can_bus = CanBus(os.path.join(firmware_base, 'common/daq/per_dbc_VCAN.dbc'), config['default_ip'], self.can_config, firmware_base)
         self.can_bus.connect_sig.connect(self.updateConnectionStatus)
         self.can_bus.write_sig.connect(self.updateWriteConnectionStatus)
         self.can_bus.bus_load_sig.connect(self.updateBusLoad)
+        self.can_bus.uds_msg_sig.connect(self.handleTimeStampUpdate)
         self.daq_protocol = DaqProtocol(self.can_bus, self.daq_config)
+        self.old_time = None
+
+        self.timeEventTimedOut.connect(self.timeStampUpdateTimedOut)
 
         # Status Bar
         self.ui.comlbl = QtWidgets.QLabel()
@@ -68,6 +80,7 @@ class Main(QtWidgets.QMainWindow):
         self.ui.logoutButton = QtWidgets.QPushButton('Stop Writing to Car')
         self.ui.logEnableBtn = QtWidgets.QPushButton('Start Logging')
         self.ui.logDisableBtn = QtWidgets.QPushButton('Stop Logging')
+        self.ui.syncTimeBtn = QtWidgets.QPushButton('Sync Time with Car')
         self.ui.eventButton.setStyleSheet("border-color: black; border-style: outset; border-width: 2px;")
         self.ui.writelbl = QtWidgets.QLabel()
         self.ui.statusbar.addWidget(self.ui.comlbl)
@@ -79,11 +92,13 @@ class Main(QtWidgets.QMainWindow):
         self.ui.statusbar.addWidget(self.ui.writelbl)
         self.ui.statusbar.addWidget(self.ui.logEnableBtn)
         self.ui.statusbar.addWidget(self.ui.logDisableBtn)
+        self.ui.statusbar.addWidget(self.ui.syncTimeBtn)
         self.ui.eventButton.clicked.connect(self.logEvent)
         self.ui.loginButton.clicked.connect(self.loginEvent)
         self.ui.logoutButton.clicked.connect(self.logoutEvent)
         self.ui.logEnableBtn.clicked.connect(self.logEvent)
         self.ui.logDisableBtn.clicked.connect(self.logDisableEvent)
+        self.ui.syncTimeBtn.clicked.connect(self.syncTimeEvent)
 
         # Menu Bar Tools
         self.ui.play_icon = self.style().standardIcon(getattr(QtWidgets.QStyle, 'SP_MediaPlay'))
@@ -103,6 +118,7 @@ class Main(QtWidgets.QMainWindow):
         self.ui.accessoryLayoutWidget = QtWidgets.QWidget()
         self.ui.accessoryLayoutWidget.setLayout(self.ui.accessoryLayout)
 
+        # Make sure to add any new widgets in the refreshWidgets() method as well.
         self.ui.varEdit = VariableEditor(self.daq_protocol)
         self.ui.fileViewer = FileViewer()
         self.ui.frameViewer = FrameViewer(self.can_bus, self.ui.centralwidget)
@@ -154,6 +170,7 @@ class Main(QtWidgets.QMainWindow):
         self.ui.actionLoad_View.triggered.connect(self.loadView)
         self.ui.actionSave_View.triggered.connect(self.saveView)
         self.ui.actionPreferences.triggered.connect(lambda : PreferencesEditor.editPreferences(self.ui.varEdit, parent=self))
+        self.ui.actionSelect_CAN_Bus.triggered.connect(lambda: CanBusSelector(self, self.can_config))
         self.ui.actionPlayPause.triggered.connect(self.playPause)
         self.ui.actionClear.triggered.connect(self.clearData)
         self.ui.actionReconnect.triggered.connect(self.can_bus.reconnect)
@@ -203,6 +220,36 @@ class Main(QtWidgets.QMainWindow):
         else:
             self.ui.accessoryLayout.removeWidget(widget)
             widget.hide()
+
+    def refreshWidgets(self):
+        # Re initialize widgets with the correct can bus settings
+        self.ui.varEdit = VariableEditor(self.daq_protocol)
+        self.ui.frameViewer = FrameViewer(self.can_bus, self.ui.centralwidget)
+        self.ui.cellViewer  = CellViewer(self.can_bus)
+        self.ui.logExporter = LogExporter(self.can_bus)
+        self.ui.bootloader  = Bootloader(self.can_bus, config['firmware_path'])
+        self.ui.chargeViewer  = ChargeViewer(self.can_bus)
+        self.ui.faultViewer = FaultViewer(self.can_bus, self.fault_config, self.daq_protocol)
+        self.ui.sensorViewer = SensorViewer(self.can_bus)
+        self.ui.systemMonitor = SystemMonitor(self.can_bus)
+        self.ui.motorViewer = MotorViewer(self.can_bus)
+        self.ui.carViewer = CarViewer(self.can_bus)
+
+        # All the widgets being displayed are now outdated so clear them
+        for i in reversed(range(self.ui.accessoryLayout.count())):
+          widget = self.ui.accessoryLayout.itemAt(i).widget()
+          self.viewWidget(False, widget=widget)
+          widget.setParent(None)
+
+        # Clear out any previously selected action
+        for action in self.ui.menuView.actions():
+          action.setChecked(False)
+
+        # Only set frame viewer to checked since that is active
+        self.ui.actionFrame_Viewer.setChecked(True)
+
+        # Default to frame viewer to see if your widget refresh looks good
+        self.ui.accessoryLayout.addWidget(self.ui.frameViewer)
 
     def newLCD(self):
         """ Adds a new LCD dashboard widget """
@@ -367,6 +414,91 @@ class Main(QtWidgets.QMainWindow):
     def logDisableEvent(self):
         """Attempts to stop the PI logger"""
         self.can_bus.sendLogCmd(False)
+
+    def syncTimeEvent(self):
+        """Attempts to sync RTC Time With DAQ PCB"""
+        current_time = dt.datetime.now()
+        utils.log_warning(f"Attempting to sync DAQ time to {current_time}. Year: {current_time.year}, Month: {current_time.month}, Weekday: {current_time.weekday() + 1}, Day: {current_time.day}, Hour: {current_time.hour}, Minute: {current_time.minute}, Second: {current_time.second}")
+        # 64 bit int following scheme in daq_uds.c to form msg payload
+        # Byte 0: Command, Byte 1: Seconds Byte 2: Minutes Byte 3: Hours Byte 4: Year Byte 5: Month Byte 6: Weekday Byte 7: Day
+        year_tens = (int)((current_time.year - 2000) / 10)
+        year_units = (current_time.year) % 10
+        year = ((year_tens << 4) | year_units)
+        month_tens = (int)((current_time.month) / 10)
+        month_units = (current_time.month) % 10
+        month = ((month_tens << 4) | month_units)
+        day_tens = (int)((current_time.day) / 10)
+        day_units = (current_time.day) % 10
+        day = ((day_tens << 4) | day_units)
+        hours_tens = (int)((current_time.hour) / 10)
+        hours_units = (current_time.hour) % 10
+        hours = ((hours_tens << 4) | hours_units)
+        minutes_tens = (int)((current_time.minute) / 10)
+        minutes_units = (current_time.minute) % 10
+        minutes = ((minutes_tens << 4) | minutes_units)
+        seconds_tens = (int)((current_time.second) / 10)
+        seconds_units = (current_time.second) % 10
+        seconds = ((seconds_tens << 4) | seconds_units)
+
+        data = bytes([0x60, day, (current_time.weekday() + 1),  month, year, hours, minutes, seconds])
+        msg_from_dbc = self.can_bus.db.get_message_by_name("uds_command_daq")
+        self.can_bus.sendMsg(can.Message(arbitration_id=msg_from_dbc.frame_id,
+                                         is_extended_id=True,
+                                         data=data))
+
+        self.timeEventTimedOutTimer = threading.Timer(7, self.timeOutPrepare)
+        self.confirmUpdateTimer = threading.Timer(5, self.confirmUpdatedTime)
+
+        self.timeEventTimedOutTimer.start()
+        self.confirmUpdateTimer.start()
+
+    def confirmUpdatedTime(self):
+        utils.log_warning("Retrieving Updated time:")
+        msg_from_dbc = self.can_bus.db.get_message_by_name("uds_command_daq")
+        self.can_bus.sendMsg(can.Message(arbitration_id=msg_from_dbc.frame_id,
+                                         is_extended_id=True,
+                                         data=bytes([0x61, 0, 0, 0, 0, 0, 0, 0])))
+
+    def handleTimeStampUpdate(self, msg: can.Message):
+        utils.log_success("Response Recieved from UDS!")
+
+
+
+        # dbc_msg = self.can_bus.db.get_message_by_frame_id(msg.arbitration_id)
+        data = int.from_bytes(msg.data, "little")
+        day = (data >> 0) & 0xff
+        weekday = (data >> 8) & 0xff
+        month = (data >> 16) & 0xff
+        year = (data >> 24) & 0xff
+
+        hours = (data >> 32) & 0xff
+        minutes = (data >> 40) & 0xff
+        seconds = (data >> 48) & 0xff
+
+        ret_code = (data >> 56) & 0xff
+
+        utils.log_success(f"Data: Ret code: {ret_code}, Year: {year}, Month: {month}, Weekday: {weekday}, Day: {day}, Hour: {hours}, Minute: {minutes}, Second: {seconds}")
+
+        if (ret_code == 0):
+            self.old_time = f"{month}/{day}/{year}, {hours}:{minutes}:{seconds}"
+        else:
+          self.timeEventTimedOutTimer.cancel()
+          TimeSyncStatus(old_time=self.old_time, new_time=f"{month}/{day}/{year}, {hours}:{minutes}:{seconds}", ret_code=ret_code)
+          self.old_time = None
+
+
+    def timeOutPrepare(self):
+        self.timeEventTimedOut.emit()
+
+    def timeStampUpdateTimedOut(self):
+        utils.log_error("Timed out loser")
+
+        if (self.old_time is None):
+          TimeSyncStatus(None, None, ret_code=5)
+        else:
+          self.old_time = None
+          TimeSyncStatus(None, None, ret_code=4)
+
 
 
     def closeEvent(self, event):

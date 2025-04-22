@@ -37,9 +37,9 @@ class DAQVariable(BusSignal):
     """ DAQ variable that can be subscribed (connected) to for receiving updates"""
 
 
-    def __init__(self, bus_name, node_name, msg_name, sig_name, id, read_only, bit_length, 
+    def __init__(self, bus_name, node_name, msg_name, sig_name, id, read_only, bit_length,
                  dtype, store_dtype=None, unit="", msg_desc="", sig_desc="", msg_period=0, file_name=None, file_lbl=None, scale=1, offset=0):
-        super(DAQVariable, self).__init__(bus_name, node_name, msg_name, sig_name, dtype, store_dtype=store_dtype, 
+        super(DAQVariable, self).__init__(bus_name, node_name, msg_name, sig_name, dtype, store_dtype=store_dtype,
                                           unit=unit, msg_desc=msg_desc, sig_desc=sig_desc, msg_period=msg_period)
         self.id = id
         self.read_only = read_only
@@ -67,15 +67,15 @@ class DAQVariable(BusSignal):
                 utils.log_error(f"Invalid bit length defined for DAQ variable {var['var_name']}")
             bit_length = var['length']
 
-        return DAQVariable(bus['bus_name'], node['node_name'], f"daq_response_{node['node_name'].upper()}", var['var_name'],
+        return DAQVariable(bus['bus_name'], node['node_name'], f"daq_response_{node['node_name'].upper()}_{bus['bus_name'].upper()}", var['var_name'],
                          id, var['read_only'], bit_length,
                          send_dtype, store_dtype=parse_dtype,
                          unit=(var['unit'] if 'unit' in var else ""),
-                         
-                         sig_desc=(var['var_desc'] if 'var_desc' in var else ""), 
+
+                         sig_desc=(var['var_desc'] if 'var_desc' in var else ""),
                          scale=(var['scale'] if 'scale' in var else 1),
                          offset=(var['offset'] if 'offset' in var else 0))
-    
+
     def fromDAQFileVar(id, var, file_name, file_lbl, node, bus):
         send_dtype = utils.data_types[var['type']]
         # If there is scaling going on, don't store as an integer on accident
@@ -86,7 +86,7 @@ class DAQVariable(BusSignal):
         # Calculate bit length
         bit_length = utils.data_type_length[var['type']]
 
-        return DAQVariable(bus['bus_name'], node['node_name'], f"daq_response_{node['node_name'].upper()}", var['var_name'],
+        return DAQVariable(bus['bus_name'], node['node_name'], f"daq_response_{node['node_name'].upper()}_{bus['bus_name'].upper()}", var['var_name'],
                          id, False, bit_length,
                          send_dtype, store_dtype=parse_dtype,
                          unit=(var['unit'] if 'unit' in var else ""),
@@ -155,7 +155,8 @@ class DaqProtocol(QtCore.QObject):
 
     def readVar(self, var: DAQVariable):
         """ Requests to read a variable, expects a reply """
-        dbc_msg = self.can_bus.db.get_message_by_name(f"daq_command_{var.node_name.upper()}")
+        dbc_msg = self.can_bus.db.get_message_by_name(f"daq_command_{var.node_name.upper()}_{var.bus_name.upper()}")
+        print(dbc_msg)
         data = [((var.id & DAQ_ID_MASK) << DAQ_CMD_LENGTH) | DAQ_CMD_READ]
         self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id,
                                          is_extended_id=True,
@@ -163,7 +164,8 @@ class DaqProtocol(QtCore.QObject):
 
     def writeVar(self, var: DAQVariable, new_val):
         """ Writes to a variable """
-        dbc_msg = self.can_bus.db.get_message_by_name(f"daq_command_{var.node_name.upper()}")
+        ccan = "CCAN"
+        dbc_msg = self.can_bus.db.get_message_by_name(f"daq_command_{var.node_name.upper()}_{var.bus_name.upper()}")
         data = [((var.id & DAQ_ID_MASK) << DAQ_CMD_LENGTH) | DAQ_CMD_WRITE]
         bytes = var.reverseToBytes(new_val)
         # LSB, add variable data to byte array
@@ -171,23 +173,23 @@ class DaqProtocol(QtCore.QObject):
             data.append(bytes[i])
         var.updateDirty(True)
 
-        self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id, 
+        self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id,
                                          is_extended_id=True,
                                          data=data))
-        
+
     def saveFile(self, var: DAQVariable):
         """ Saves variable state in eeprom, expects save complete reply """
         if var.file_lbl == None:
             utils.log_error(f"Invalid save var operation for {var.signal_name}")
             return
-        dbc_msg = self.can_bus.db.get_message_by_name(f"daq_command_{var.node_name.upper()}")
+        dbc_msg = self.can_bus.db.get_message_by_name(f"daq_command_{var.node_name.upper()}_{var.bus_name.upper()}")
         data = [((var.id & DAQ_ID_MASK) << DAQ_CMD_LENGTH) | DAQ_CMD_SAVE]
         lbl = var.file_lbl
         data.append(ord(lbl[0]))
         data.append(ord(lbl[1]))
         data.append(ord(lbl[2]))
         data.append(ord(lbl[3]))
-        self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id, 
+        self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id,
                                         is_extended_id=True,
                                         data=data))
         self.setFileClean(var)
@@ -203,14 +205,14 @@ class DaqProtocol(QtCore.QObject):
         # if self.save_in_progress:
         #     utils.log_error(f"Cannot load var during save operation ")
         #     return
-        dbc_msg = self.can_bus.db.get_message_by_name(f"daq_command_{var.node_name.upper()}")
+        dbc_msg = self.can_bus.db.get_message_by_name(f"daq_command_{var.node_name.upper()}_{var.bus_name.upper()}")
         data = [((var.id & DAQ_ID_MASK) << DAQ_CMD_LENGTH) | DAQ_CMD_LOAD]
         lbl = var.file_lbl
         data.append(ord(lbl[0]))
         data.append(ord(lbl[1]))
         data.append(ord(lbl[2]))
         data.append(ord(lbl[3]))
-        self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id, 
+        self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id,
                                          is_extended_id=True,
                                          data=data))
         self.setFileClean(var)
@@ -218,7 +220,7 @@ class DaqProtocol(QtCore.QObject):
     def pubVar(self, var: DAQVariable, period_ms):
         """ Requests to start publishing a variable at a specified period """
         var.pub_period_ms = period_ms
-        dbc_msg = self.can_bus.db.get_message_by_name(f"daq_command_{var.node_name.upper()}")
+        dbc_msg = self.can_bus.db.get_message_by_name(f"daq_command_{var.node_name.upper()}_{var.bus_name.upper()}")
         data = [((var.id & DAQ_ID_MASK) << DAQ_CMD_LENGTH) | DAQ_CMD_PUB_START]
         data.append(int(period_ms / 15) & 0xFF)
         self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id,
@@ -268,12 +270,12 @@ class DaqProtocol(QtCore.QObject):
     def pubVarStop(self, var: DAQVariable):
         """ Requests to stop publishing a variable """
         var.pub_period_ms = 0
-        dbc_msg = self.can_bus.db.get_message_by_name(f"daq_command_{var.node_name.upper()}")
+        dbc_msg = self.can_bus.db.get_message_by_name(f"daq_command_{var.node_name.upper()}_{var.bus_name.upper()}")
         data = [((var.id & DAQ_ID_MASK) << DAQ_CMD_LENGTH) | DAQ_CMD_PUB_STOP]
         self.can_bus.sendMsg(can.Message(arbitration_id=dbc_msg.frame_id,
                                          is_extended_id=True,
                                          data=data))
-    
+
     def setFileClean(self, var_in_file: DAQVariable):
         """ Sets all variables in a file to clean (usually after flushing) """
         if (var_in_file.file_lbl == None): return
@@ -311,7 +313,8 @@ class DaqProtocol(QtCore.QObject):
             if cmd == DAQ_RPLY_READ or cmd == DAQ_RPLY_PUB:
                 id = (data >> curr_bit) & DAQ_ID_MASK
                 curr_bit += DAQ_ID_LENGTH
-                var = list(utils.signals[utils.b_str][node_name][dbc_msg.name].values())[id]
+                # Remove bus from end of signal
+                var = list(utils.signals[utils.b_str][node_name][dbc_msg.name[:-5]].values())[id]
                 if not (cmd == DAQ_RPLY_PUB and self.can_bus.is_paused):
                     var.update((data >> curr_bit) & ~(0xFFFFFFFFFFFFFFFF << var.bit_length), msg.timestamp, not utils.logging_paused)
                     utils.log_error("Updated " + var.signal_name)

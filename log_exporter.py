@@ -2,6 +2,7 @@ import os
 import cantools
 import can
 import numpy as np
+import datetime as dt
 
 # Logging helper functions
 class bcolors:
@@ -25,18 +26,18 @@ def log_success(phrase):
     log(f"{bcolors.OKGREEN}{phrase}{bcolors.ENDC}")
 
 def log(phrase):
-    print(phrase) 
+    print(phrase)
 
 class LogExporter():
     """
     Exports a binary log files into csv files
-    Separate CSV files are created based on groupings 
+    Separate CSV files are created based on groupings
         of continuous time intervals
     """
     CAN_EFF_FLAG = 0x80000000
     CAN_RTR_FLAG = 0x40000000
     CAN_ERR_FLAG = 0x20000000
-    MSG_BYTE_LEN = 18
+    MSG_BYTE_LEN = 19
     MAX_JUMP_MS = 300 # Creates new file if message is this far from previous
 
     def __init__(self, dbc_path):
@@ -75,7 +76,7 @@ class LogExporter():
                 self.signal_to_col[bus] = {}
             if not node in self.signal_to_col[bus]:
                 self.signal_to_col[bus][node] = {}
-            
+
             self.signal_to_col[bus][node][msg] = {}
             for sig in msg_c.signals:
                 self.signal_to_col[bus][node][msg][sig.name] = col
@@ -93,32 +94,36 @@ class LogExporter():
 
     def _bytes_to_message(self,b:bytearray):
         """Convert raw bytes to can.Message object"""
-        ts = int.from_bytes(b[:4], "little")/1000.0
-        can_id = int.from_bytes(b[4:8], 'little')
-        bus_id = b[8]
-        dlc = b[9]
-        #decompose ID
-        is_extended = bool(can_id & self.CAN_EFF_FLAG) #CAN_EFF_FLAG
-        if is_extended:
-            arb_id = can_id & 0x1FFFFFFF
-        else:
-            arb_id = can_id & 0x000007FF
+        try:
+          ts = int.from_bytes(b[1:5], "little")/1000.0
+          can_id = int.from_bytes(b[5:9], 'little')
+          bus_id = b[9]
+          dlc = b[10]
+          #decompose ID
+          is_extended = bool(can_id & self.CAN_EFF_FLAG) #CAN_EFF_FLAG
+          if is_extended:
+              arb_id = can_id & 0x1FFFFFFF
+          else:
+              arb_id = can_id & 0x000007FF
 
-        return can.Message(
-            timestamp = ts,
-            arbitration_id = arb_id,
-            is_extended_id = is_extended,
-            is_error_frame = bool(can_id & self.CAN_ERR_FLAG),
-            is_remote_frame = bool(can_id & self.CAN_RTR_FLAG),
-            dlc=dlc,
-            channel=bus_id,
-            data=b[10:10+dlc]
-        )
+          return can.Message(
+              timestamp = ts,
+              arbitration_id = arb_id,
+              is_extended_id = is_extended,
+              is_error_frame = bool(can_id & self.CAN_ERR_FLAG),
+              is_remote_frame = bool(can_id & self.CAN_RTR_FLAG),
+              dlc=dlc,
+              channel=bus_id,
+              data=b[11:11+dlc]
+          )
+        except:
+            log_error("Short data detected.")
+            return None
 
     def _new_out_file(self):
         # Ensure if current row exists that we write it
         if not self.out_to_file: return
-        if (self.out_file != None): 
+        if (self.out_file != None):
             self._write_row()
             self.out_file.close()
         self.out_file = open(os.path.join(self.out_dir, f"out_{self.out_fil_cnt}.csv"), 'w')
@@ -187,7 +192,7 @@ class LogExporter():
                     log_warning(f"Failed to convert msg: {msg}")
                     print(e)
         if msg.is_error_frame:
-            # log(f"Received error frame: {msg}")
+            log(f"Received error frame: {msg}")
             # if not self.prev_is_err:
             #     print(f"{self.prev_msg} preceeded error")
             self.prev_is_err = True
@@ -197,14 +202,15 @@ class LogExporter():
     def _get_input_file_list(self, dir):
         "Gets .log files sorted by creation time"
         def get_creation_time(item):
-            item_path = os.path.join(dir, item)
-            return os.path.getctime(item_path)
+            item_timefields = os.path.basename(item).split('-')
+            print(item_timefields)
+            return dt.datetime(int(item_timefields[1]), int(item_timefields[2]), int(item_timefields[3]), int(item_timefields[5]), int(item_timefields[6]), int(item_timefields[7][:-4]))
         items = [i for i in os.listdir(dir) if i.endswith('.log')]
         sorted_items = sorted(items, key=get_creation_time)
         return sorted_items
 
-    def parse_files(self, input_dir, output_dir, bus='Main', binning_ms=15, fill_empty_vals=True):
-        # Determine files in directory of type .log        
+    def parse_files(self, input_dir, output_dir, bus='VCAN', binning_ms=15, fill_empty_vals=True):
+        # Determine files in directory of type .log
         # The created file should contain info about which log files it contains
         if (input_dir == output_dir):
             log_error("Input dir == ouput dir!")
@@ -225,12 +231,14 @@ class LogExporter():
         # Iterate through all messages in all input files
         for in_log in in_logs:
             with open(os.path.join(input_dir, in_log), 'rb') as f:
+                log_success(f"NEW File: {in_log}")
                 while True:
                     s = f.read(self.MSG_BYTE_LEN)
                     if len(s) == 0: break
                     ba = bytearray(s)
                     msg = self._bytes_to_message(ba)
-                    decode = self._parse_msg(msg)
+                    if (msg is not None):
+                      decode = self._parse_msg(msg)
 
         if self.out_file != None:
             self.out_file.close()
@@ -239,17 +247,17 @@ class LogExporter():
 p = "F:/"
 #p = "D:/2024_04_01_logs/in"
 p = "D:/Otterbein_04_06_2024/Evening"
-p = "C:/Users/Ruhaan Joshi/Downloads/log-2024-02-27--23-15-02"
-#p = "D:/log_recovery/test_in" 
+p = "/Users/adityaanand/PER/logs_2025/LOGS 412"
+#p = "D:/log_recovery/test_in"
 #p = "D:/log_recovery/ruhaan_driving/"
 #out_dir = "D:/log_recovery/test_out"
 #out_dir = "D:/2024_04_01_logs/out"
 #out_dir = "D:/Otterbein_4_5_24"
 out_dir = "D:/Otterbein_04_06_2024/Evening_parsed"
-out_dir = "C:/Users/Ruhaan Joshi/Downloads/ewbin"
+out_dir = "/Users/adityaanand/PER/logs_2025/LOGS 412 Parsed"
 
 #dbc_dir = "D:/Downloads/per_dbc.dbc"
-dbc_dir = "C:/Users/Ruhaan Joshi/Downloads/per_dbc.dbc"
+dbc_dir = "/Users/adityaanand/dev/per/firmware/common/daq/per_dbc_VCAN.dbc"
 
 le = LogExporter(dbc_dir)
 

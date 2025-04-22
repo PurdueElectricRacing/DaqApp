@@ -84,10 +84,17 @@
     </property>
     <addaction name="actionImport_log"/>
    </widget>
+   <widget class="QMenu" name="menuCAN">
+    <property name="title">
+     <string>CAN</string>
+    </property>
+    <addaction name="actionSelect_CAN_Bus"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit_2"/>
    <addaction name="menuEdit"/>
    <addaction name="menuView"/>
+   <addaction name="menuCAN"/>
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
@@ -244,6 +251,11 @@
    </property>
    <property name="text">
     <string>Car Viewer</string>
+   </property>
+  </action>
+  <action name="actionSelect_CAN_Bus">
+   <property name="text">
+    <string>Select CAN Bus</string>
    </property>
   </action>
  </widget>

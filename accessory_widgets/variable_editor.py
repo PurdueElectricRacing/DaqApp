@@ -32,12 +32,11 @@ class VariableEditor(QtWidgets.QWidget):
         self.ui.loadButton.setDisabled(True)
         self.ui.startPubButton.setDisabled(True)
         self.ui.stopPubButton.setDisabled(True)
-
         # Add nodes to node selector
         self.updateNodeList()
 
         self.curr_var = None
-        self.save_in_prog = False 
+        self.save_in_prog = False
         self.changes_unsaved = False
 
     def updateNodeList(self):
@@ -66,12 +65,12 @@ class VariableEditor(QtWidgets.QWidget):
         self.ui.loadButton.setDisabled(self.save_in_prog or (self.curr_var.file_lbl == None) or self.curr_var.read_only)
         self.ui.startPubButton.setDisabled(False)
         self.ui.stopPubButton.setDisabled(False)
-    
+
     def varDoubleClicked(self, item):
         """ Selects and reads from variable """
         self.varSelected(item)
         self.readButtonClicked()
-    
+
     def updateVarList(self, idx):
         """ Updates the listed variables based on the selected node """
         self.ui.variableList.clear()
@@ -79,12 +78,12 @@ class VariableEditor(QtWidgets.QWidget):
             self.ui.variableList.addItems([var[1].signal_name for var in utils.signals[utils.b_str][self.ui.nodeSelector.currentText()][f"daq_response_{self.ui.nodeSelector.currentText().upper()}"].items()])
         except KeyError:
             pass # empty
-    
+
     def readButtonClicked(self):
         """ Requests a variable read operation """
         self.ui.currValDisp.setText("Reading...")
         self.daq_protocol.readVar(self.curr_var)
-    
+
     def writeButtonClicked(self):
         """ Requests a variable write operation """
         try:
@@ -95,7 +94,7 @@ class VariableEditor(QtWidgets.QWidget):
         if not self.curr_var.valueSendable(new_value):
             self.ui.newValDisp.setText(str(new_value) + f" <- Invalid for send dtype: {str(self.curr_var.send_dtype)}, scale: {self.curr_var.scale}, offset: {self.curr_var.offset})")
             return
-        
+
         # Convey that the current value displayed may be old
         prev_text = self.ui.currValDisp.text()
         if len(prev_text) > 0 and "(previous)" not in prev_text:
@@ -109,7 +108,7 @@ class VariableEditor(QtWidgets.QWidget):
         """ Requests a variable save operation """
         self.changes_unsaved = False
         self.daq_protocol.saveFile(self.curr_var)
-    
+
     def loadButtonClicked(self):
         """ Requests a variable load operation """
         # Convey that the current value displayed may be old
@@ -118,7 +117,7 @@ class VariableEditor(QtWidgets.QWidget):
             self.ui.currValDisp.setText(prev_text + " (previous)")
 
         self.daq_protocol.loadFile(self.curr_var)
-    
+
     def startPubButtonClicked(self):
         """ Requests a variable publish operation """
         try:
@@ -130,7 +129,7 @@ class VariableEditor(QtWidgets.QWidget):
             self.ui.newValDisp.setText(str(period) + f" <- out of range (max: {255 * 15} ms)")
             return
         self.daq_protocol.pubVar(self.curr_var, period)
-    
+
     def stopPubButtonClicked(self):
         """ Requests a stop publish operation """
         self.ui.pubPeriodDisp.setText("0")
@@ -139,7 +138,7 @@ class VariableEditor(QtWidgets.QWidget):
     def handleReceive(self):
         """ Updates the current value displayed when the subscribed variable is updated """
         self.ui.currValDisp.setText(str(self.curr_var.curr_val))
-    
+
     def handleSaveProgress(self, in_progress):
         """ Callback for displaying the status of a save operation """
         self.save_in_prog = in_progress

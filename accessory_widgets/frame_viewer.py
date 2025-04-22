@@ -21,20 +21,24 @@ class FrameViewer(QtWidgets.QWidget):
         self.ui.msgTable.setColumnCount(7)
         self.ui.msgTable.setHorizontalHeaderLabels(["Time Delta", "Rx/Tx","ID","Sender","Name","DLC","Data"])
         header = self.ui.msgTable.horizontalHeader()
-        header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
+        # Allowing this to dynamically resize will cause slight performance issues due to update rate
+        header.setSectionResizeMode(0, QtWidgets.QHeaderView.Interactive)
+        # Updated infrequently enough to not need to worry
         header.setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeToContents)
         header.setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(3, QtWidgets.QHeaderView.Interactive)
-        header.setSectionResizeMode(4, QtWidgets.QHeaderView.Interactive)
+        header.setSectionResizeMode(3, QtWidgets.QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(4, QtWidgets.QHeaderView.ResizeToContents)
         header.setSectionResizeMode(5, QtWidgets.QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(6, QtWidgets.QHeaderView.Stretch)
+        # Data is important enough to justify frequent changes
+        header.setSectionResizeMode(6, QtWidgets.QHeaderView.ResizeToContents)
 
         # Configure Vertical Headers
-        self.ui.msgTable.verticalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
-        self.ui.msgTable.verticalHeader().sectionDoubleClicked.connect(self.removeRow)
+        self.ui.msgTable.verticalHeader().sectionDoubleClicked.connect(self.refreshScreen)
 
         # Disable ability to edit cells
         self.ui.msgTable.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
+
+        self.ui.msgTable.setSortingEnabled(False)
 
         self.bus = bus
         bus.new_msg_sig.connect(self.messageReceived)
@@ -44,11 +48,8 @@ class FrameViewer(QtWidgets.QWidget):
         self.timer.timeout.connect(self.updateRows)
         self.timer.start(int(1000.0/self.fps))
 
-        self.row_ids = []
-        self.row_times = []
-        self.row_deltas = []
-        self.row_dlcs = []
-        self.row_data = []
+        self.messages = {}
+        self.curr_row_idx = 0
 
 
     def messageReceived(self, msg: can.Message):
@@ -63,6 +64,8 @@ class FrameViewer(QtWidgets.QWidget):
                 for idx, sig in enumerate(decode_msg):
                     if (type(decode_msg[sig]) == str):
                         data += str(sig)+": "+decode_msg[sig]+" "+(dbc_msg.signals[idx].unit if dbc_msg.signals[idx].unit else "")+", "
+                    elif (dbc_msg.name == 'uds_command_daq'):
+                        data = hex(int.from_bytes(msg.data, "big"))
                     else:
                         data += str(sig)+": "+"{:.3f}".format(decode_msg[sig])+" "+(dbc_msg.signals[idx].unit if dbc_msg.signals[idx].unit else "")+", "
             except ValueError as e:
@@ -74,40 +77,61 @@ class FrameViewer(QtWidgets.QWidget):
 
         with self.data_lock:
             # Create new row if not yet existing
-            if msg.arbitration_id not in self.row_ids:
-                self.row_ids.append(msg.arbitration_id)
-                self.row_times.append(msg.timestamp)
-                self.row_deltas.append(0)
-                self.row_dlcs.append(msg.dlc)
-                self.row_data.append(data)
-                self.ui.msgTable.setRowCount(len(self.row_ids))
-                
+            if dbc_msg.name not in self.messages:
+                self.messages[dbc_msg.name] = {'id': msg.arbitration_id, 'time': msg.timestamp, 'delta': 0, 'dlc': msg.dlc, 'data': data, 'raw_data': msg.data, 'row_idx': self.curr_row_idx, 'old_data': msg.data, 'old_dlc': msg.dlc, 'old_delta': 0}
+                # We just added a row so increment our new row counter
+                self.curr_row_idx += 1
+                self.ui.msgTable.setRowCount(self.curr_row_idx)
+
                 # update row contents that do not change for a message once
-                self.ui.msgTable.setItem(len(self.row_ids) - 1, 1, QtWidgets.QTableWidgetItem("Rx" if msg.is_rx else "Tx"))
-                self.ui.msgTable.setItem(len(self.row_ids) - 1, 2, QtWidgets.QTableWidgetItem(hex(msg.arbitration_id)))
-                self.ui.msgTable.setItem(len(self.row_ids) - 1, 3, QtWidgets.QTableWidgetItem(dbc_msg.senders[0]))
-                self.ui.msgTable.setItem(len(self.row_ids) - 1, 4, QtWidgets.QTableWidgetItem(dbc_msg.name))
+                self.ui.msgTable.setItem(self.messages[dbc_msg.name]['row_idx'], 1, QtWidgets.QTableWidgetItem("Rx" if msg.is_rx else "Tx"))
+                self.ui.msgTable.setItem(self.messages[dbc_msg.name]['row_idx'], 2, QtWidgets.QTableWidgetItem(hex(msg.arbitration_id)))
+                self.ui.msgTable.setItem(self.messages[dbc_msg.name]['row_idx'], 3, QtWidgets.QTableWidgetItem(dbc_msg.senders[0]))
+                self.ui.msgTable.setItem(self.messages[dbc_msg.name]['row_idx'], 4, QtWidgets.QTableWidgetItem(dbc_msg.name))
+
+                # Create item objects for the new rows to update periodically
+                self.ui.msgTable.setItem(self.messages[dbc_msg.name]['row_idx'], 0, QtWidgets.QTableWidgetItem("0")) # Just recieved the item we have no valid delta
+                self.ui.msgTable.setItem(self.messages[dbc_msg.name]['row_idx'], 5, QtWidgets.QTableWidgetItem(str(msg.dlc)))
+                self.ui.msgTable.setItem(self.messages[dbc_msg.name]['row_idx'], 6, QtWidgets.QTableWidgetItem(data))
+
             else:
-                row_idx = self.row_ids.index(msg.arbitration_id)
-                self.row_deltas[row_idx] = msg.timestamp - self.row_times[row_idx]
-                self.row_times[row_idx] = msg.timestamp
-                self.row_dlcs[row_idx] = msg.dlc
-                self.row_data[row_idx] = data
+                self.messages[dbc_msg.name]['delta'] = msg.timestamp - self.messages[dbc_msg.name]['time']
+                self.messages[dbc_msg.name]['time'] = msg.timestamp
+                self.messages[dbc_msg.name]['dlc'] = msg.dlc
+                self.messages[dbc_msg.name]['data'] = data
+                # Avoid costly string comparison
+                self.messages[dbc_msg.name]['raw_data'] = msg.data
+
 
     def updateRows(self):
         """ Updates all rows, called periodically """
+        # Handle the updates in one batch to avoid sending too many requests to UI
+        self.ui.msgTable.setUpdatesEnabled(False)
         with self.data_lock:
-            for idx in range(len(self.row_ids)):
-                self.ui.msgTable.setItem(idx, 0, QtWidgets.QTableWidgetItem(f"{self.row_deltas[idx]:.4f}"))
-                self.ui.msgTable.setItem(idx, 5, QtWidgets.QTableWidgetItem(str(self.row_dlcs[idx])))
-                self.ui.msgTable.setItem(idx, 6, QtWidgets.QTableWidgetItem(self.row_data[idx]))
+            for idx, msg in enumerate(self.messages):
+                # Only update the delta if it has actually changed
+                if (self.messages[msg]['old_delta'] != self.messages[msg]['delta']):
+                  self.ui.msgTable.item(idx, 0).setText(f"{self.messages[msg]['delta']:.4f}")
+                  self.messages[msg]['old_delta'] = self.messages[msg]['delta']
 
-    def removeRow(self, row_idx: int):
-        """ removes row from the table """
+                # Only update the DLC if it has changed
+                if (self.messages[msg]['old_dlc'] != self.messages[msg]['dlc']):
+                  self.ui.msgTable.item(idx, 5).setText(str(self.messages[msg]['dlc']))
+                  self.messages[msg]['old_dlc'] = self.messages[msg]['dlc']
+
+                # Only update the data if it has changed
+                if (self.messages[msg]['old_data'] != self.messages[msg]['raw_data']):
+                    self.ui.msgTable.item(idx, 6).setText(self.messages[msg]['data'])
+                    self.messages[msg]['old_data'] = self.messages[msg]['raw_data']
+        # Display batch of updates
+        self.ui.msgTable.setUpdatesEnabled(True)
+        self.ui.msgTable.viewport().update()
+
+
+    def refreshScreen(self):
+        """ Empties table and allows it to repopulate """
         with self.data_lock:
-            self.row_ids.pop(row_idx)
-            self.row_times.pop(row_idx)
-            self.row_deltas.pop(row_idx)
-            self.row_dlcs.pop(row_idx)
-            self.row_data.pop(row_idx)
-            self.ui.msgTable.removeRow(row_idx)
+            for idx, msg in enumerate(self.messages):
+              self.ui.msgTable.removeRow(idx)
+            self.messages = {}
+            self.curr_row_idx = 0
