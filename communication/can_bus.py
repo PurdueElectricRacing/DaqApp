@@ -306,8 +306,7 @@ class CanBus(QtCore.QThread):
             # This keyerror is triggering
             except KeyError:
                 if dbc_msg and "daq" not in dbc_msg.name and "fault" not in dbc_msg.name:
-                    # if utils.debug_mode: utils.log_warning(f"Unrecognized signal key for {msg}")
-                    pass
+                    if utils.debug_mode: utils.log_warning(f"Unrecognized signal key for {msg}")
                 # elif "fault" not in dbc_msg.name:
                 #     if utils.debug_mode: utils.log_warning(f"unrecognized: {msg.arbitration_id}")
             except ValueError as e:
@@ -370,7 +369,7 @@ class CanBus(QtCore.QThread):
             # Bus load estimation
             if (time.time() - self.last_estimate_time) > 1:
                 self.last_estimate_time = time.time()
-                bus_load = self.total_bits / 250000.0 * 100
+                bus_load = self.total_bits / self.can_config['busses'][self.bus_idx]['bus_speed'] * 100.0
                 self.total_bits = 0
                 self.bus_load_sig.emit(bus_load)
                 # if loop_count != 0 and loop_count-skips != 0 and utils.debug_mode: print(f"rx period (ms): {1/loop_count*1000}, skipped: {skips}, process time (ms): {avg_process_time / (loop_count-skips)*1000}")
@@ -385,7 +384,7 @@ class BusSignal(QtCore.QObject):
     """ Signal that can be subscribed (connected) to for updates """
 
     update_sig = QtCore.pyqtSignal()
-    history = 250000#240000 # for 0.015s update period 1 hour of data
+    history = 500000#240000 # for 0.015s update period 1 hour of data
     data_lock = threading.Lock()
 
     def __init__(self, bus_name, node_name, msg_name, sig_name, dtype, store_dtype=None, unit="", msg_desc="", sig_desc="", msg_period=0):

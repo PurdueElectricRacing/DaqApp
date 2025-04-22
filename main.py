@@ -328,7 +328,7 @@ class Main(QtWidgets.QMainWindow):
                     # set color
                     chosen_sigs[-1].color = QtGui.QColor(*sig[4])
                 except KeyError:
-                    # utils.log_error(f"Unrecognized signal key for {sig[3]}")
+                    utils.log_error(f"Unrecognized signal key for {sig[3]}")
                     return
             if 'PlotWidget' in name:
                 new_display_widgets.append(PlotWidget(utils.signals, parent=self, selected_signals=chosen_sigs))
@@ -421,8 +421,6 @@ class Main(QtWidgets.QMainWindow):
         utils.log_warning(f"Attempting to sync DAQ time to {current_time}. Year: {current_time.year}, Month: {current_time.month}, Weekday: {current_time.weekday() + 1}, Day: {current_time.day}, Hour: {current_time.hour}, Minute: {current_time.minute}, Second: {current_time.second}")
         # 64 bit int following scheme in daq_uds.c to form msg payload
         # Byte 0: Command, Byte 1: Seconds Byte 2: Minutes Byte 3: Hours Byte 4: Year Byte 5: Month Byte 6: Weekday Byte 7: Day
-        # I think the year will need to be encoded differently
-        # data = bytes([0x60, current_time.second, current_time.minute, current_time.hour, (current_time.year - 2000), current_time.month, (current_time.weekday() + 1), current_time.day])
         year_tens = (int)((current_time.year - 2000) / 10)
         year_units = (current_time.year) % 10
         year = ((year_tens << 4) | year_units)
