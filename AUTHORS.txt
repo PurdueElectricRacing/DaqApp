@@ -1,0 +1,10 @@
+###########################################################
+Authors:
+	- Daniel Proano 
+
+Notes:
+	To all future developers, it was NOT my idea to code
+	in rust. Trust, my fav language is C and Python, so
+	I am very sorry :/
+
+###########################################################

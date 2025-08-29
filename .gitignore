@@ -1,6 +1,0 @@
-*.pyc
-.vscode/tasks.json
-/build
-/dist
-/logs
-dashboard.json
