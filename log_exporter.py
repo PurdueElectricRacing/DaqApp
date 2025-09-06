@@ -28,6 +28,30 @@ def log_success(phrase):
 def log(phrase):
     print(phrase)
 
+# Helper functions --------------------------------------------------------------------#
+def load_can_dbcs(dbc_fpath: str, recursive: bool = False) -> cantools.db.Database:
+    """
+    Scans a folder (and optionally all subfolders) for DBC files and loads them into a
+    single CAN database.
+    :param dbc_fpath: The path to the CAN DBC folder
+    :param recursive: Whether to search subdirectories recursively (default: False)
+    :return: The loaded CAN database
+    """
+    db = cantools.db.Database()
+    if not dbc_fpath or not os.path.isdir(dbc_fpath):
+        return db
+    if recursive:
+        for root, _, files in os.walk(dbc_fpath):
+            for file in files:
+                if file.endswith(".dbc"):
+                    db.add_dbc_file(os.path.join(root, file))
+    else:
+        for file in os.listdir(dbc_fpath):
+            if file.endswith(".dbc"):
+                db.add_dbc_file(os.path.join(dbc_fpath, file))
+    return db
+#--------------------------------------------------------------------------------------#
+
 class LogExporter():
     """
     Exports a binary log files into csv files
@@ -41,7 +65,7 @@ class LogExporter():
     MAX_JUMP_MS = 300 # Creates new file if message is this far from previous
 
     def __init__(self, dbc_path):
-        self.db = cantools.db.load_file(dbc_path)
+        self.db = load_can_dbcs(dbc_path)
         self._init_col_dict()
 
         self.start_t = 0
@@ -257,8 +281,9 @@ out_dir = "D:/Otterbein_04_06_2024/Evening_parsed"
 out_dir = "/Users/adityaanand/PER/logs_2025/LOGS 412 Parsed"
 
 #dbc_dir = "D:/Downloads/per_dbc.dbc"
-dbc_dir = "/Users/adityaanand/dev/per/firmware/common/daq/per_dbc_VCAN.dbc"
+# dbc_dir = "/Users/adityaanand/dev/per/firmware/common/daq/per_dbc_VCAN.dbc"
+dbc_fpath = os.path.join("/Users/adityaanand/dev/per/firmware/common/daq/")
 
-le = LogExporter(dbc_dir)
+le = LogExporter(dbc_fpath)
 
 le.parse_files(p, out_dir, fill_empty_vals=True)
