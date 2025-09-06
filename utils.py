@@ -3,6 +3,7 @@ from jsonschema import validate
 from jsonschema.exceptions import ValidationError
 import numpy as np
 import sys
+import os
 
 # Global Variables
 def initGlobals():
@@ -78,6 +79,28 @@ def load_json_config(config_path, schema_path):
         sys.exit(1)
 
     return config
+
+def load_json_nodes(nodes_fpath):
+    """ loads each node config from a folder and combines it into one dict """
+    can_config = {}
+    for file in os.listdir(nodes_fpath):
+        if file.endswith(".json"):
+            node_config = json.load(open(os.path.join(nodes_fpath, file)))
+            node_busses = node_config['busses']
+
+            existing_busses = can_config.get('busses', [])
+            for bus in node_busses:
+                found = False
+                for existing_bus in existing_busses:
+                    if bus['bus_name'] == existing_bus['bus_name']:
+                        found = True
+                        existing_bus['nodes'].extend(bus['nodes'])
+                        break
+                if not found:
+                    existing_busses.append(bus)
+            can_config['busses'] = existing_busses
+    return can_config
+
 
 def clearDictItems(dictionary:dict):
     """ recursively calls clear on items in multidimensional dict"""

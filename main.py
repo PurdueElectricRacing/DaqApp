@@ -54,13 +54,13 @@ class Main(QtWidgets.QMainWindow):
         # Load Configurations (dictionaries)
         firmware_base = config['firmware_path']
         self.daq_config = utils.load_json_config(os.path.join(firmware_base, 'common/daq/daq_config.json'), os.path.join(firmware_base, 'common/daq/daq_schema.json'))
-        self.can_config = utils.load_json_config(os.path.join(firmware_base, 'common/daq/can_config.json'), os.path.join(firmware_base, 'common/daq/can_schema.json'))
+        self.can_config = utils.load_json_nodes(os.path.join(firmware_base, 'common/daq/node_configs'))
         self.fault_config = utils.load_json_config(os.path.join(firmware_base, 'common/faults/fault_config.json'), os.path.join(firmware_base, 'common/faults/fault_schema.json'))
         self.fault_config = DaqProtocol.create_ids(self, self.fault_config)
 
         # Can Bus Initialization
         # Default to the VCAN DBC, but this will be configurable.
-        self.can_bus = CanBus(os.path.join(firmware_base, 'common/daq/per_dbc_VCAN.dbc'), config['default_ip'], self.can_config, firmware_base)
+        self.can_bus = CanBus(os.path.join(firmware_base, 'common/daq/'), config['default_ip'], self.can_config, firmware_base)
         self.can_bus.connect_sig.connect(self.updateConnectionStatus)
         self.can_bus.write_sig.connect(self.updateWriteConnectionStatus)
         self.can_bus.bus_load_sig.connect(self.updateBusLoad)

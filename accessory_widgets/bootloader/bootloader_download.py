@@ -16,9 +16,37 @@ from intelhex import IntelHex
 from can_process import CANRxThread, CANTxThread
 from bootloader_commands import BootloaderCommand
 import os
+
+# Helper functions --------------------------------------------------------------------#
+def load_can_dbcs(dbc_fpath: str, recursive: bool = False) -> cantools.db.Database:
+    """
+    Scans a folder (and optionally all subfolders) for DBC files and loads them into a
+    single CAN database.
+    :param dbc_fpath: The path to the CAN DBC folder
+    :param recursive: Whether to search subdirectories recursively (default: False)
+    :return: The loaded CAN database
+    """
+    db = cantools.db.Database()
+    if not dbc_fpath or not os.path.isdir(dbc_fpath):
+        return db
+    if recursive:
+        for root, _, files in os.walk(dbc_fpath):
+            for file in files:
+                if file.endswith(".dbc"):
+                    db.add_dbc_file(os.path.join(root, file))
+    else:
+        for file in os.listdir(dbc_fpath):
+            if file.endswith(".dbc"):
+                db.add_dbc_file(os.path.join(dbc_fpath, file))
+    return db
+#--------------------------------------------------------------------------------------#
+
+
 dbc_path = Path(__file__).parent.parent.joinpath(Path("daq/per_dbc.dbc"))
+dbc_path = Path(__file__).parent.parent.joinpath(Path("daq"))
+
 # Setup CAN bus and DBC
-db = cantools.database.load_file(dbc_path)
+db = load_can_dbcs(dbc_path)
 dev = usb.core.find(idVendor=0x1D50, idProduct=0x606F)
 bus = None
 if dev:
