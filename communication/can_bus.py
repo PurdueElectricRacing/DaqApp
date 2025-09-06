@@ -17,6 +17,30 @@ import numpy as np
 import math
 import os
 
+# Helper functions --------------------------------------------------------------------#
+def load_can_dbcs(dbc_fpath: str, recursive: bool = False) -> cantools.db.Database:
+    """
+    Scans a folder (and optionally all subfolders) for DBC files and loads them into a
+    single CAN database.
+    :param dbc_fpath: The path to the CAN DBC folder
+    :param recursive: Whether to search subdirectories recursively (default: False)
+    :return: The loaded CAN database
+    """
+    db = cantools.db.Database()
+    if not dbc_fpath or not os.path.isdir(dbc_fpath):
+        return db
+    if recursive:
+        for root, _, files in os.walk(dbc_fpath):
+            for file in files:
+                if file.endswith(".dbc"):
+                    db.add_dbc_file(os.path.join(root, file))
+    else:
+        for file in os.listdir(dbc_fpath):
+            if file.endswith(".dbc"):
+                db.add_dbc_file(os.path.join(dbc_fpath, file))
+    return db
+#--------------------------------------------------------------------------------------#
+
 
 class CanBus(QtCore.QThread):
     """
@@ -33,10 +57,10 @@ class CanBus(QtCore.QThread):
     flt_msg_sig = QtCore.pyqtSignal(can.Message)
     bl_msg_sig = QtCore.pyqtSignal(can.Message)
 
-    def __init__(self, dbc_path, default_ip, can_config: dict, fw_base, bus_idx: int=0):
+    def __init__(self, dbc_fpath, default_ip, can_config: dict, fw_base, bus_idx: int=0):
         super(CanBus, self).__init__()
-        self.db = cantools.db.load_file(dbc_path)
-        self.dbc_path = dbc_path
+        self.db = load_can_dbcs(dbc_fpath)
+        self.dbc_path = dbc_fpath
 
         utils.log(f"CAN version: {can.__version__}")
         utils.log(f"gs_usb version: {gs_usb.__version__}")

@@ -60,7 +60,7 @@ class Main(QtWidgets.QMainWindow):
 
         # Can Bus Initialization
         # Default to the VCAN DBC, but this will be configurable.
-        self.can_bus = CanBus(os.path.join(firmware_base, 'common/daq/per_dbc_VCAN.dbc'), config['default_ip'], self.can_config, firmware_base)
+        self.can_bus = CanBus(os.path.join(firmware_base, 'common/daq/'), config['default_ip'], self.can_config, firmware_base)
         self.can_bus.connect_sig.connect(self.updateConnectionStatus)
         self.can_bus.write_sig.connect(self.updateWriteConnectionStatus)
         self.can_bus.bus_load_sig.connect(self.updateBusLoad)
