@@ -54,7 +54,7 @@ class Main(QtWidgets.QMainWindow):
         # Load Configurations (dictionaries)
         firmware_base = config['firmware_path']
         self.daq_config = utils.load_json_config(os.path.join(firmware_base, 'common/daq/daq_config.json'), os.path.join(firmware_base, 'common/daq/daq_schema.json'))
-        self.can_config = utils.load_json_config(os.path.join(firmware_base, 'common/daq/can_config.json'), os.path.join(firmware_base, 'common/daq/can_schema.json'))
+        self.can_config = utils.load_json_nodes(os.path.join(firmware_base, 'common/daq/node_configs'))
         self.fault_config = utils.load_json_config(os.path.join(firmware_base, 'common/faults/fault_config.json'), os.path.join(firmware_base, 'common/faults/fault_schema.json'))
         self.fault_config = DaqProtocol.create_ids(self, self.fault_config)
 
