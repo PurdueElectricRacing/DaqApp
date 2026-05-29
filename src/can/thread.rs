@@ -1,12 +1,7 @@
-use crate::{can, connection, ui};
-use chrono::{DateTime, Local};
-use log::logger;
-use slcan::{Can2Frame, CanFrame};
-use core::time;
+use crate::{can, connection, messages, util};
+use std::fs::{File, OpenOptions, create_dir_all};
 use std::io::Write;
-use std::os::linux::raw;
-use std::{thread, time::Duration};
-use std::fs::{File, OpenOptions, create_dir_all, exists, write};
+use std::time::Instant;
 use bytemuck::{Pod, Zeroable};
 
 const NO_CONNECTION_SLEEP_MS: u64 = 200;
@@ -14,25 +9,173 @@ const READ_RETRY_SLEEP_MS: u64 = 2;
 const BUS_LOAD_UPDATE_MS: u128 = 200;
 
 #[repr(C)]
-#[derive(Pod, Zeroable, Copy, Clone)]
-struct RawFrame {
-    ticks_ms: u32,
-    identity: u32,
-    data: [u8; 8],
+#[derive(Pod, Zeroable, Copy, Clone, Debug)]
+pub struct RawFrame {
+    pub ticks_ms: u32,
+    pub identity: u32,
+    pub data: [u8; 8],
 }
 
-pub struct Logger {
+pub struct DaqLogger {
     file: Option<File>,
-    time: DateTime<Local>,
+    buffer: Vec<RawFrame>,
+    last_flush: Instant,
+    start_time: Instant,
+    buffer_capacity: usize,
 }
 
-impl Logger {
-    pub fn new(file: Option<File>) -> Logger{
-        Logger {file: file, time: Local::now()}
+impl DaqLogger {
+    pub fn new() -> Self {
+        Self {
+            file: None,
+            buffer: Vec::with_capacity(10000),
+            last_flush: Instant::now(),
+            start_time: Instant::now(),
+            buffer_capacity: 5000,
+        }
+    }
+
+    pub fn log_can2_frame(&mut self, frame: &slcan::Can2Frame, bus_id: u8) {
+        let (id, data) = match frame.id() {
+            slcan::Id::Standard(sid) => {
+                let id = sid.as_raw() as u32;
+                (id, frame.data().unwrap_or(&[]))
+            }
+            slcan::Id::Extended(eid) => {
+                let id = eid.as_raw() | 0x80000000;  // Extended ID flag
+                (id, frame.data().unwrap_or(&[]))
+            }
+        };
+
+        let identity = if bus_id != 0 {
+            id | 0x40000000  // BUS_ID_MASK
+        } else {
+            id
+        };
+
+        let mut data_array = [0u8; 8];
+        data_array[..data.len().min(8)].copy_from_slice(&data[..data.len().min(8)]);
+
+        let ticks_ms = self.start_time.elapsed().as_millis() as u32;
+
+        let raw_frame = RawFrame {
+            ticks_ms,
+            identity,
+            data: data_array,
+        };
+
+        self.add_frame(raw_frame);
+    }
+
+    pub fn log_canfd_frame(&mut self, frame: &slcan::CanFdFrame, bus_id: u8) {
+        let (id, data) = match frame.id() {
+            slcan::Id::Standard(sid) => {
+                let id = sid.as_raw() as u32;
+                (id, frame.data())
+            }
+            slcan::Id::Extended(eid) => {
+                let id = eid.as_raw() | 0x80000000;
+                (id, frame.data())
+            }
+        };
+
+        let identity = if bus_id != 0 {
+            id | 0x40000000 
+        } else {
+            id
+        };
+
+        let mut data_array = [0u8; 8];
+        data_array[..data.len().min(8)].copy_from_slice(&data[..data.len().min(8)]);
+
+        let ticks_ms = self.start_time.elapsed().as_millis() as u32;
+
+        let raw_frame = RawFrame {
+            ticks_ms,
+            identity,
+            data: data_array,
+        };
+
+        self.add_frame(raw_frame);
+    }
+
+    fn add_frame(&mut self, frame: RawFrame) {
+        self.buffer.push(frame);
+
+        if self.buffer.len() >= self.buffer_capacity {
+            self.flush();
+        }
+    }
+
+    pub fn flush(&mut self) {
+        if self.buffer.is_empty() {
+            return;
+        }
+
+        if self.file.is_none() {
+            if let Err(e) = create_dir_all("./logs") {
+                log::error!("Failed to create logs directory: {}", e);
+                self.buffer.clear();
+                return;
+            }
+
+            let filename = format!(
+                "./logs/daq_{}.log",
+                chrono::Local::now().format("%Y-%m-%d_%H-%M-%S")
+            );
+
+            match OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .open(&filename)
+            {
+                Ok(f) => {
+                    self.file = Some(f);
+                    log::info!("Started DAQ logging to {}", filename);
+                }
+                Err(e) => {
+                    log::error!("Failed to create log file: {}", e);
+                    self.buffer.clear();
+                    return;
+                }
+            }
+        }
+
+        if let Some(ref mut file) = self.file {
+            for frame in &self.buffer {
+                if let Err(e) = file.write_all(bytemuck::bytes_of(frame)) {
+                    log::error!("Failed to write to log file: {}", e);
+                    break;
+                }
+            }
+
+            if let Err(e) = file.flush() {
+                log::error!("Failed to flush log file: {}", e);
+            }
+        }
+
+        self.buffer.clear();
+        self.last_flush = Instant::now();
+    }
+
+    pub fn shutdown(&mut self) {
+        self.flush();
+        if let Some(ref mut file) = self.file.take() {
+            let _ = file.sync_all();
+        }
+        log::info!("DAQ logging shut down");
     }
 }
 
-fn process_can_frame(frame: &CanFrame, state: &can::state::State) {
+impl Drop for DaqLogger {
+    fn drop(&mut self) {
+        self.shutdown();
+    }
+}
+
+// Returns the number of payload data bytes in the CAN frame if it was a Can2 frame
+fn process_can_frame(frame: slcan::CanFrame, state: &can::state::State) -> usize {
     match frame {
         slcan::CanFrame::Can2(frame2) => {
             let decode_msg_id = util::can::slcan_to_u32_with_extid_flag(&frame2.id());
@@ -103,17 +246,15 @@ fn process_can_frame(frame: &CanFrame, state: &can::state::State) {
     }
 }
 
+
 pub fn start_can_thread(
     can_to_ui_tx: std::sync::mpsc::Sender<messages::MsgFromCan>,
     ui_to_can_rx: std::sync::mpsc::Receiver<messages::MsgFromUi>,
     selected_source: Option<connection::ConnectionSource>,
-) -> thread::JoinHandle<()> {
-    thread::spawn(move || {
-        let mut state = can::state::State::new(can_sender, ui_receiver);
-        let mut driver: Option<Box<dyn can::driver::Driver>> = None;
-        let mut current_source: Option<connection::ConnectionSource> = selected_source;
-
-        let mut last_log = Logger::new(None);
+) -> std::thread::JoinHandle<()> {
+    std::thread::spawn(move || {
+        let mut state = can::state::State::new(can_to_ui_tx, ui_to_can_rx, selected_source);
+        let mut daq_logger = DaqLogger::new();
 
         // MAIN LOOP
         loop {
@@ -149,6 +290,7 @@ pub fn start_can_thread(
                     }
                 }
             }
+
 
             let msgs_to_send = state.send_this_tick();
             for msg in msgs_to_send {
@@ -259,10 +401,39 @@ pub fn start_can_thread(
                 continue;
             };
 
-            match active_driver.read_frame() {
-                Ok(frame) => {
-                    process_can_frame(&frame, &state);
-                    log_frame(&frame, &mut last_log);
+            match active_driver.read_frames() {
+                Ok(frames) => {
+                    for frame in frames {
+                        let data_bytes = process_can_frame(frame.clone(), &state);
+                        state.bus_load_tracker.record_frame(data_bytes);
+                        
+                        // Log each frame (buffered, not flushed yet)
+                        match &frame {
+                            slcan::CanFrame::Can2(f2) => daq_logger.log_can2_frame(f2, 0),
+                            slcan::CanFrame::CanFd(ffd) => daq_logger.log_canfd_frame(ffd, 0),
+                        }
+                    }
+                    
+                    // Send bus load updates periodically
+                    if state.last_bus_load_update.elapsed().as_millis() >= BUS_LOAD_UPDATE_MS {
+                        state.bus_load_tracker.cleanup();
+                        let load_1s = state.bus_load_tracker.get_load(1);
+                        let load_5s = state.bus_load_tracker.get_load(5);
+                        let load_10s = state.bus_load_tracker.get_load(10);
+                        let load_30s = state.bus_load_tracker.get_load(30);
+
+                        state
+                            .can_to_ui_tx
+                            .send(messages::MsgFromCan::BusLoad {
+                                load_1s,
+                                load_5s,
+                                load_10s,
+                                load_30s,
+                            })
+                            .expect("Failed to send bus load message");
+
+                        state.last_bus_load_update = std::time::Instant::now();
+                    }
                 }
                 Err(can::driver::DriverError::ReadError(error_type)) => {
                     match error_type {
@@ -295,62 +466,9 @@ pub fn start_can_thread(
             }
         }
 
+        // Cleanup on thread exit
+        daq_logger.shutdown();
+        
         unreachable!("CAN thread should never exit on its own");
     })
-}
-
-// Log every CAN frame within a certain amount of time
-pub fn log_frame(frame: &CanFrame, last_log: &mut Logger) {
-    match create_dir_all("./logs/") {
-        Ok(_) => {}
-        Err(e) => {log::error!("Error with logs directory: {}", e)}
-    }
-
-    let now = Local::now();
-    let difference = now - last_log.time;
-
-    if last_log.file.is_none() || difference.num_minutes() > 3 {
-        let filename = format!("./logs/{}.log", now.format("%Y-%m-%d_%H-%M-%S"));
-        match OpenOptions::new().write(true).append(true).create(true).open(&filename) {
-            Ok(f) => {
-                last_log.file = Some(f);
-                last_log.time = now;
-            }
-            Err(e) => {
-                log::error!("Error creating file: {}", e);
-                return;
-            }
-        }
-    }
-
-    if let Some(file) = &mut last_log.file {
-        let ticks = now.timestamp_millis() as u32;
-        let raw_message = match frame {
-            CanFrame::Can2(frame2) => {
-                let id = match frame2.id() {
-                    slcan::Id::Standard(sid) => sid.as_raw() as u32,
-                    slcan::Id::Extended(eid) => eid.as_raw(),
-                };
-                let mut raw_data = [0u8; 8];
-                if let Some(data_slice) = frame2.data() {
-                    raw_data[..data_slice.len().min(8)].copy_from_slice(&data_slice[..data_slice.len().min(8)]);
-                }
-                RawFrame { ticks_ms: ticks, identity: id, data: raw_data }
-            }
-            CanFrame::CanFd(frame_fd) => {
-                let id = match frame_fd.id() {
-                    slcan::Id::Standard(sid) => sid.as_raw() as u32,
-                    slcan::Id::Extended(eid) => eid.as_raw(),
-                };
-                let mut raw_data = [0u8; 8];
-                let data_slice = frame_fd.data();
-                raw_data[..data_slice.len().min(8)].copy_from_slice(&data_slice[..data_slice.len().min(8)]);
-                RawFrame { ticks_ms: ticks, identity: id, data: raw_data }
-            }
-        };
-
-        if let Err(e) = file.write_all(bytemuck::bytes_of(&raw_message)) {
-            log::error!("Error writing to file: {}", e);
-        }
-    }
 }
