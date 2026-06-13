@@ -56,6 +56,10 @@ impl AppAction {
                 "Spawn Jitter",
                 widget_constructor::WidgetConstructor::Jitter,
             ),
+            (
+                "Spawn HIL",
+                widget_constructor::WidgetConstructor::Hil
+            ),
         ]
     }
 }
