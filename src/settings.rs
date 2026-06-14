@@ -1,4 +1,4 @@
-use crate::{connection, theme};
+use crate::{can::daq_logger, connection, theme};
 
 pub const SETTINGS_PATH: &str = "settings.json";
 pub const DEFAULT_LOG_FOLDER: &str = "logs";
