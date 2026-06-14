@@ -6,7 +6,8 @@ pub enum ConnectionSource {
     Loopback,
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Copy, Clone, PartialEq, Debug, Default)]
+#[derive(serde::Serialize, serde::Deserialize, Copy, Clone, PartialEq, Debug)]
+#[derive(Default)]
 pub enum CanBusSpeed {
     Kbps250,
     #[default]

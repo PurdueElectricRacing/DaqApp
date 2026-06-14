@@ -1,7 +1,6 @@
-use crate::{action, app, assets, connection, formatter, messages, util, widget_constructor};
-use crate::{can, settings};
-use eframe::egui;
 use crate::can;
+use crate::{action, app, assets, connection, formatter, messages, util};
+use eframe::egui;
 
 pub fn select_dbc(
     app: &mut app::DAQApp,
@@ -276,11 +275,11 @@ pub fn show(app: &mut app::DAQApp, ctx: &egui::Context) {
             });
 
             ui.horizontal(|ui| {
-                if ui.button("📁 Select Log Folder").clicked() {
-                    if let Some(path) = rfd::FileDialog::new().pick_folder() {
-                        app.log_folder = Some(path);
-                        app.save_settings();
-                    }
+                if ui.button("📁 Select Log Folder").clicked()
+                    && let Some(path) = rfd::FileDialog::new().pick_folder()
+                {
+                    app.log_folder = Some(path);
+                    app.save_settings();
                 }
 
                 let log_display = app.log_folder
