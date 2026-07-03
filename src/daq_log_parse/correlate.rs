@@ -169,7 +169,10 @@ pub fn time_correlate_chunk(chunk: Vec<ParsedMessage>) -> CorrelationChunkResult
     let (slope, intercept) = match linear_regression(&points) {
         Some(v) => v,
         None => {
-            log::error!("Failed to refit correlation line. Points: {:?}", points);
+            log::error!(
+                "Failed to refit correlation line. Points count: {}",
+                points.len()
+            );
             return CorrelationChunkResult::uncorrelated_new(chunk);
         }
     };
@@ -210,7 +213,6 @@ pub fn time_correlate_chunk(chunk: Vec<ParsedMessage>) -> CorrelationChunkResult
     )
 }
 
-#[derive(Debug)]
 struct Point {
     x: f64, // log timestamp ms
     y: f64, // unix timestamp ms
