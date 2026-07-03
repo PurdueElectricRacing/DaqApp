@@ -1,7 +1,6 @@
 use crate::{
-    action, connection, formatter, messages, settings, shortcuts, theme, ui, util, widgets,
-    widget_ids,
-    workspace,
+    action, connection, formatter, messages, settings, shortcuts, theme, ui, util, widget_ids,
+    widgets, workspace,
 };
 use eframe::egui;
 
@@ -143,54 +142,7 @@ impl DAQApp {
     pub fn handle_action(&mut self, action: action::AppAction, ctx: &egui::Context) {
         match action {
             action::AppAction::SpawnWidget(widget_type) => {
-                let widget = match &widget_type {
-                    action::WidgetType::ViewerTable => widgets::Widget::ViewerTable(
-                        ui::viewer_table::ViewerTable::new(self.widget_ids.next(widget_type)),
-                    ),
-                    action::WidgetType::ViewerList => widgets::Widget::ViewerList(
-                        ui::viewer_list::ViewerList::new(self.widget_ids.next(widget_type))
-                    ),
-                    action::WidgetType::Bootloader => widgets::Widget::Bootloader(
-                        ui::bootloader::Bootloader::new(self.widget_ids.next(widget_type)),
-                    ),
-                    action::WidgetType::Scope {
-                        msg_id,
-                        msg_name,
-                        signal_name,
-                    } => widgets::Widget::Scope(ui::scope::Scope::new(
-                        self.widget_ids.next(widget_type.clone()),
-                        *msg_id,
-                        msg_name.clone(),
-                        signal_name.clone(),
-                    )),
-                    action::WidgetType::LogParser => widgets::Widget::LogParser(
-                        ui::log_parser::LogParser::new(self.widget_ids.next(widget_type))
-                    ),
-                    action::WidgetType::SendUi => widgets::Widget::SendUi(ui::send::SendUi::new(
-                        self.widget_ids.next(widget_type),
-                        self.ui_to_can_tx.clone(),
-                    )),
-                    action::WidgetType::BusLoad => {
-                        widgets::Widget::BusLoad(ui::bus_load::BusLoad::new(self.widget_ids.next(widget_type)))
-                    }
-                    action::WidgetType::BatteryVoltage => widgets::Widget::BatteryVoltage(
-                        ui::battery::battery_voltage::BatteryVoltage::new(
-                            self.widget_ids.next(widget_type),
-                        ),
-                    ),
-                    action::WidgetType::BatteryTemps => widgets::Widget::BatteryTemps(
-                        ui::battery::battery_temps::BatteryTemps::new(self.widget_ids.next(widget_type)),
-                    ),
-                    action::WidgetType::GgPlot => {
-                        widgets::Widget::GgPlot(ui::gg_plot::GgPlot::new(self.widget_ids.next(widget_type)))
-                    }
-                    action::WidgetType::Dynamics => widgets::Widget::Dynamics(
-                        ui::dynamics::Dynamics::new(self.widget_ids.next(widget_type)),
-                    ),
-                    action::WidgetType::Jitter => {
-                        widgets::Widget::Jitter(ui::jitter::Jitter::new(self.widget_ids.next(widget_type)))
-                    }
-                };
+                let widget = widget_type.create(&mut self.widget_ids, self.ui_to_can_tx.clone());
                 self.add_widget_to_tree(widget);
             }
             action::AppAction::ToggleSidebar => {

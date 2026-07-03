@@ -12,9 +12,10 @@ mod shortcuts;
 mod theme;
 mod ui;
 mod util;
+mod widget_constructor;
+mod widget_ids;
 mod widgets;
 mod workspace;
-mod widget_ids;
 
 fn main() -> eframe::Result<()> {
     env_logger::Builder::from_default_env()
