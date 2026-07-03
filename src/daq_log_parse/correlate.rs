@@ -199,9 +199,13 @@ pub fn time_correlate_chunk(chunk: Vec<ParsedMessage>) -> CorrelationChunkResult
         points.len()
     );
 
-    // Log error (but continue) if slope is not ~1.0
-    if (slope - 1.0).abs() > 0.001 {
-        log::error!("GPS correlation slope is not ~1.0");
+    // Log error (but continue) if slope is not ~REGRESSION_FALLBACK_SLOPE
+    if (slope - REGRESSION_FALLBACK_SLOPE).abs() > 0.001 {
+        log::error!(
+            "GPS correlation slope ({:.9}) deviates from expected {:.3}.",
+            slope,
+            REGRESSION_FALLBACK_SLOPE,
+        );
     }
 
     CorrelationChunkResult::correlated_new(
