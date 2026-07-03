@@ -1,7 +1,10 @@
 use crate::widget_constructor;
 
 pub struct WidgetIds {
-    counters: std::collections::HashMap<widget_constructor::WidgetConstructor, usize>,
+    counters: std::collections::HashMap<
+        std::mem::Discriminant<widget_constructor::WidgetConstructor>,
+        usize,
+    >,
 }
 
 impl WidgetIds {
@@ -12,7 +15,8 @@ impl WidgetIds {
     }
 
     pub fn next(&mut self, kind: widget_constructor::WidgetConstructor) -> usize {
-        let counter = self.counters.entry(kind).or_insert(1);
+        let disc = std::mem::discriminant(&kind);
+        let counter = self.counters.entry(disc).or_insert(1);
         let id = *counter;
         *counter += 1;
         id
