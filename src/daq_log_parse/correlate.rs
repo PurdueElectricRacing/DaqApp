@@ -155,6 +155,7 @@ pub fn time_correlate_chunk(chunk: Vec<ParsedMessage>) -> CorrelationChunkResult
 
     if gps_points.is_empty() {
         // No GPS points found, can't correlate
+        log::warn!("No GPS points found in chunk, cannot correlate timestamps");
         return CorrelationChunkResult::uncorrelated_new(chunk);
     }
 
@@ -169,7 +170,7 @@ pub fn time_correlate_chunk(chunk: Vec<ParsedMessage>) -> CorrelationChunkResult
     let (slope, intercept) = match linear_regression(&points) {
         Some(v) => v,
         None => {
-            log::error!("Failed to refit correlation line");
+            log::error!("Failed to refit correlation line. Points: {:?}", points);
             return CorrelationChunkResult::uncorrelated_new(chunk);
         }
     };
@@ -205,6 +206,7 @@ pub fn time_correlate_chunk(chunk: Vec<ParsedMessage>) -> CorrelationChunkResult
     )
 }
 
+#[derive(Debug)]
 struct Point {
     x: f64, // log timestamp ms
     y: f64, // unix timestamp ms
