@@ -14,6 +14,7 @@ mod ui;
 mod util;
 mod widgets;
 mod workspace;
+mod widget_ids;
 
 fn main() -> eframe::Result<()> {
     env_logger::Builder::from_default_env()
