@@ -3,10 +3,9 @@ use chrono::TimeZone as _;
 
 use crate::daq_log_parse::parse::ParsedMessage;
 
-// If there is only one GPS point, it is not possible to do a linear regression.
-// In that case, we will use this fallback slope value. It is in general safe to
-// assume a slope of 1.0, since DAQ runs at 1 tick = 1 ms, but in post processing,
-// there is not a reason to not run proper linear regression if there are multiple GPS points.
+// In that case we use this fallback slope value. It is generally safe to assume a
+// slope of 1.0 since the DAQ runs at 1 tick = 1 ms, but in post-processing there
+// is no reason not to run a proper linear regression when multiple GPS points exist.
 const REGRESSION_FALLBACK_SLOPE: f64 = 1.0;
 
 pub struct CorrelationFunction {
