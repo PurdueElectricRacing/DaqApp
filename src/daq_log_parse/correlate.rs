@@ -224,7 +224,7 @@ struct Point {
 
 /// Least squares linear regression.
 ///
-/// Note: on if there is only 1 point, uses REGRESSION_FALLBACK_SLOPE
+/// Note: if there is only 1 point, uses REGRESSION_FALLBACK_SLOPE
 ///
 /// Fits:
 /// y = slope * x + intercept
