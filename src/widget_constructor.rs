@@ -1,6 +1,6 @@
 use crate::{messages, ui, widget_ids, widgets};
 
-#[derive(Hash, Eq, PartialEq, Clone)]
+#[derive(Eq, PartialEq, Clone)]
 pub enum WidgetConstructor {
     ViewerTable,
     ViewerList,
@@ -18,6 +18,25 @@ pub enum WidgetConstructor {
     GgPlot,
     Dynamics,
     Jitter,
+}
+
+impl std::hash::Hash for WidgetConstructor {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        match self {
+            WidgetConstructor::ViewerTable => 0.hash(state),
+            WidgetConstructor::ViewerList => 1.hash(state),
+            WidgetConstructor::Bootloader => 2.hash(state),
+            WidgetConstructor::Scope { .. } => 3.hash(state),
+            WidgetConstructor::LogParser => 4.hash(state),
+            WidgetConstructor::SendUi => 5.hash(state),
+            WidgetConstructor::BusLoad => 6.hash(state),
+            WidgetConstructor::BatteryVoltage => 7.hash(state),
+            WidgetConstructor::BatteryTemps => 8.hash(state),
+            WidgetConstructor::GgPlot => 9.hash(state),
+            WidgetConstructor::Dynamics => 10.hash(state),
+            WidgetConstructor::Jitter => 11.hash(state),
+        }
+    }
 }
 
 impl WidgetConstructor {
