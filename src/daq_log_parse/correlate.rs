@@ -230,6 +230,7 @@ fn linear_regression(points: &[Point]) -> Option<(f64, f64)> {
 
     // Fallback for single point: use a default slope and calculate intercept based on that point
     if points.len() == 1 {
+        log::warn!("Only one GPS point found, using fallback slope of {}", REGRESSION_FALLBACK_SLOPE);
         let p = &points[0];
         let slope = REGRESSION_FALLBACK_SLOPE;
         let intercept = p.y - slope * p.x;
