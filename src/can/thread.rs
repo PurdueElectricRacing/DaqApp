@@ -230,8 +230,14 @@ pub fn start_can_thread(
 
                         match &frame {
                             slcan::CanFrame::Can2(f2) => daq_logger.log_frame(f2, 0),
-                            slcan::CanFrame::CanFd(_) => {
-                                log::error!("CAN FD Message Could Not Be Logged")
+                            slcan::CanFrame::CanFd(frame_fd) => {
+                                let msg_id_raw =
+                                    util::can::slcan_to_u32_without_extid_flag(&frame_fd.id());
+                                log::warn!(
+                                    "Received CAN FD frame (not logged) id=0x{:X} len={}",
+                                    msg_id_raw,
+                                    frame_fd.data().len()
+                                );
                             }
                         }
                     }
