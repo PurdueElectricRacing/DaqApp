@@ -9,7 +9,7 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::time::Instant;
 
-pub const LOG_FRAMES_MS: u128 = 60000;
+pub const LOG_FILE_ROTATE_MS: u128 = 60000;
 pub const LOG_FOLDER_PATH: &str = "logs";
 
 pub fn byte_to_bcd_format(val: u8) -> u8 {
@@ -96,7 +96,7 @@ impl DaqLogger {
         }
 
         // Create new file if time of creation has exceed threshold
-        if self.file.is_some() && self.file_created_at.elapsed().as_millis() >= LOG_FRAMES_MS {
+        if self.file.is_some() && self.file_created_at.elapsed().as_millis() >= LOG_FILE_ROTATE_MS {
             self.file = None;
         }
 
