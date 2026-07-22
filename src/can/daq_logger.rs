@@ -59,7 +59,10 @@ impl DaqLogger {
 
         // TODO: Add support for more CAN busses beyond 0 & 1
         // Right now, cannot handle values > 1
-        debug_assert!(bus_id <= 1, "log_frame: bus_id {bus_id} not representable in single-bit BUS_ID_MASK");
+        debug_assert!(
+            bus_id <= 1,
+            "log_frame: bus_id {bus_id} not representable in single-bit BUS_ID_MASK"
+        );
         let frame_identity = if bus_id != 0 { id | BUS_ID_MASK } else { id };
 
         let mut data_array = [0u8; 8];
