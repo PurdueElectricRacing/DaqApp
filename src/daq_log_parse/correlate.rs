@@ -3,6 +3,11 @@ use chrono::TimeZone as _;
 
 use crate::daq_log_parse::parse::ParsedMessage;
 
+// In that case we use this fallback slope value. It is generally safe to assume a
+// slope of 1.0 since the DAQ runs at 1 tick = 1 ms, but in post-processing there
+// is no reason not to run a proper linear regression when multiple GPS points exist.
+const REGRESSION_FALLBACK_SLOPE: f64 = 1.0;
+
 pub struct CorrelationFunction {
     /// real_time ~= slope * log_time_ms + intercept_ms
     ///
@@ -13,11 +18,10 @@ pub struct CorrelationFunction {
 }
 
 impl CorrelationFunction {
-    pub fn correlate(&self, log_ts: u32) -> Option<chrono::DateTime<chrono::Local>> {
+    pub fn correlate(&self, log_ts: u32) -> Option<chrono::DateTime<chrono::Utc>> {
         let unix_ms = self.slope * log_ts as f64 + self.intercept_ms;
-
         match chrono::DateTime::from_timestamp_millis(unix_ms.round() as i64) {
-            Some(dt) => Some(dt.with_timezone(&chrono::Local)),
+            Some(dt) => Some(dt),
             None => {
                 log::error!(
                     "Correlated time {} ms for log time {} ms is out of range for chrono::DateTime",
@@ -117,19 +121,18 @@ pub fn time_correlate_chunk(chunk: Vec<ParsedMessage>) -> CorrelationChunkResult
                     })
                 {
                     let dt_utc = chrono::Utc.from_utc_datetime(&dt);
-                    let dt_local = chrono::DateTime::<chrono::Local>::from(dt_utc);
 
-                    let current_year = chrono::Local::now().year();
-                    if dt_local.year() < current_year - 2 || dt_local.year() > current_year + 2 {
+                    let current_year = chrono::Utc::now().year();
+                    if dt_utc.year() < current_year - 2 || dt_utc.year() > current_year + 2 {
                         log::warn!(
                             "GPS message at {} ms has suspicious year value {}, skipping",
                             msg.timestamp,
-                            dt_local.year()
+                            dt_utc.year()
                         );
                         continue;
                     }
 
-                    gps_points.push((msg.timestamp, dt_local));
+                    gps_points.push((msg.timestamp, dt_utc));
                 } else {
                     log::error!(
                         "GPS message at {} ms has invalid date/time values, skipping",
@@ -149,6 +152,7 @@ pub fn time_correlate_chunk(chunk: Vec<ParsedMessage>) -> CorrelationChunkResult
 
     if gps_points.is_empty() {
         // No GPS points found, can't correlate
+        log::warn!("No GPS points found in chunk, cannot correlate timestamps");
         return CorrelationChunkResult::uncorrelated_new(chunk);
     }
 
@@ -163,7 +167,10 @@ pub fn time_correlate_chunk(chunk: Vec<ParsedMessage>) -> CorrelationChunkResult
     let (slope, intercept) = match linear_regression(&points) {
         Some(v) => v,
         None => {
-            log::error!("Failed to refit correlation line");
+            log::error!(
+                "Failed to refit correlation line. Points count: {}",
+                points.len()
+            );
             return CorrelationChunkResult::uncorrelated_new(chunk);
         }
     };
@@ -190,6 +197,15 @@ pub fn time_correlate_chunk(chunk: Vec<ParsedMessage>) -> CorrelationChunkResult
         points.len()
     );
 
+    // Log error (but continue) if slope is not ~REGRESSION_FALLBACK_SLOPE
+    if (slope - REGRESSION_FALLBACK_SLOPE).abs() > 0.001 {
+        log::error!(
+            "GPS correlation slope ({:.9}) deviates from expected {:.3}.",
+            slope,
+            REGRESSION_FALLBACK_SLOPE,
+        );
+    }
+
     CorrelationChunkResult::correlated_new(
         chunk,
         CorrelationFunction {
@@ -206,12 +222,25 @@ struct Point {
 
 /// Least squares linear regression.
 ///
-/// Fits:
+/// Note: if there is only 1 point, uses REGRESSION_FALLBACK_SLOPE
 ///
+/// Fits:
 /// y = slope * x + intercept
 fn linear_regression(points: &[Point]) -> Option<(f64, f64)> {
-    if points.len() < 2 {
+    if points.is_empty() {
         return None;
+    }
+
+    // Fallback for single point: use a default slope and calculate intercept based on that point
+    if points.len() == 1 {
+        log::warn!(
+            "Only one GPS point found, using fallback slope of {}",
+            REGRESSION_FALLBACK_SLOPE
+        );
+        let p = &points[0];
+        let slope = REGRESSION_FALLBACK_SLOPE;
+        let intercept = p.y - slope * p.x;
+        return Some((slope, intercept));
     }
 
     let n = points.len() as f64;
