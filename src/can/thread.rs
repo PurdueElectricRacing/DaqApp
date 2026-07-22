@@ -1,8 +1,8 @@
 use crate::{can, connection, messages, util};
 
-pub const NO_CONNECTION_SLEEP_MS: u64 = 200;
-pub const READ_RETRY_SLEEP_MS: u64 = 2;
-pub const BUS_LOAD_UPDATE_MS: u128 = 200;
+const NO_CONNECTION_SLEEP_MS: u64 = 200;
+const READ_RETRY_SLEEP_MS: u64 = 2;
+const BUS_LOAD_UPDATE_MS: u128 = 200;
 
 // Returns the number of payload data bytes in the CAN frame if it was a Can2 frame
 fn process_can_frame(frame: &slcan::CanFrame, state: &can::state::State) -> usize {
@@ -64,7 +64,15 @@ fn process_can_frame(frame: &slcan::CanFrame, state: &can::state::State) -> usiz
             data.len()
         }
 
-        slcan::CanFrame::CanFd(frame_fd) => frame_fd.data().len(),
+        slcan::CanFrame::CanFd(frame_fd) => {
+            let msg_id_raw = util::can::slcan_to_u32_without_extid_flag(&frame_fd.id());
+            log::warn!(
+                "Received CAN FD frame id=0x{:X} len={}",
+                msg_id_raw,
+                frame_fd.data().len()
+            );
+            frame_fd.data().len()
+        }
     }
 }
 
