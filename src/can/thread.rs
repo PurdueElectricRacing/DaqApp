@@ -237,6 +237,8 @@ pub fn start_can_thread(
                         state.bus_load_tracker.record_frame(data_bytes);
 
                         match &frame {
+                            // Hardcoded to bus 0: only one bus is supported
+                            // TODO: ad multi-bus support
                             slcan::CanFrame::Can2(f2) => daq_logger.log_frame(f2, 0),
                             slcan::CanFrame::CanFd(frame_fd) => {
                                 let msg_id_raw =
