@@ -972,7 +972,6 @@ dependencies = [
  "serde_json",
  "serialport",
  "slcan",
- "tempfile",
  "toml",
 ]
 
