@@ -10,6 +10,7 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 pub const LOG_FILE_ROTATE_MS: u128 = 60000;
+pub const LAST_FLUSH_MS: u128 = 1000;
 pub const LOG_FOLDER_PATH: &str = "logs";
 
 pub fn byte_to_bcd_format(val: u8) -> u8 {
@@ -84,7 +85,7 @@ impl DaqLogger {
 
         //Flush every 1 second
         if self.buffer.len() >= self.buffer_capacity
-            || self.last_flush.elapsed().as_millis() >= 1000
+            || self.last_flush.elapsed().as_millis() >= LAST_FLUSH_MS
         {
             self.flush();
         }
