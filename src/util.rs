@@ -120,7 +120,7 @@ pub fn get_absolute_path_to(path_segment: &str) -> PathBuf {
         return path;
     }
 
-    let mut path = PathBuf::from(".");
+    let mut path = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
     path.push(path_segment);
     path
 }
