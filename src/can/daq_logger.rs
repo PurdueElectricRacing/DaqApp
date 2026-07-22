@@ -1,7 +1,6 @@
 use crate::daq_log_parse::consts::{BUS_ID_MASK, IS_EID_MASK};
 
 use crate::daq_log_parse::parse::RawFrame;
-use crate::util::get_absolute_path_to;
 
 use chrono::{Datelike, Timelike};
 use std::fs::{File, create_dir_all};
@@ -11,7 +10,6 @@ use std::time::Instant;
 
 pub const LOG_FILE_ROTATE_MS: u128 = 60000;
 pub const LAST_FLUSH_MS: u128 = 1000;
-pub const LOG_FOLDER_PATH: &str = "logs";
 
 pub fn byte_to_bcd_format(val: u8) -> u8 {
     ((val / 10) << 4) | (val % 10)
@@ -28,16 +26,14 @@ pub struct DaqLogger {
 }
 
 impl DaqLogger {
-    pub fn new(folder_path: Option<std::path::PathBuf>) -> Self {
-        let path = folder_path.unwrap_or_else(|| get_absolute_path_to(LOG_FOLDER_PATH));
-
-        if let Err(e) = create_dir_all(&path) {
-            log::error!("Failed to create directory for logs: {:?}: {}", path, e);
+    pub fn new(folder_path: std::path::PathBuf) -> Self {
+        if let Err(e) = create_dir_all(&folder_path) {
+            log::error!("Failed to create directory for logs: {:?}: {}", folder_path, e);
         }
 
         Self {
             file: None,
-            folder_path: path,
+            folder_path: folder_path,
             buffer: Vec::with_capacity(10000),
             file_created_at: Instant::now(),
             start_time: Instant::now(),

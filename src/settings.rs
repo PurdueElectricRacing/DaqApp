@@ -1,6 +1,7 @@
 use crate::{connection, theme};
 
 pub const SETTINGS_PATH: &str = "settings.json";
+pub const DEFAULT_LOG_FOLDER: &str = "logs";
 const DEFAULT_UDP_PORT: u16 = 5005;
 const DEFAULT_CAN_SPEED: connection::CanBusSpeed = connection::CanBusSpeed::Kbps500;
 
@@ -45,5 +46,11 @@ impl Settings {
         let json = serde_json::to_string_pretty(self).expect("Failed to serialize settings");
         std::fs::write(SETTINGS_PATH, json)
             .unwrap_or_else(|e| log::error!("Failed to write {}: {}", SETTINGS_PATH, e));
+    }
+
+    pub fn resolved_log_folder(&self) -> std::path::PathBuf {
+        self.log_folder 
+            .clone() 
+            .unwrap_or_else(|| std::path::PathBuf::from(DEFAULT_LOG_FOLDER))
     }
 }
