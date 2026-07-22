@@ -2,6 +2,7 @@ use crate::{can::daq_logger, connection, theme};
 
 pub const SETTINGS_PATH: &str = "settings.json";
 pub const DEFAULT_LOG_FOLDER: &str = "logs";
+pub const DEFAULT_LOG_FOLDER: &str = "logs";
 const DEFAULT_UDP_PORT: u16 = 5005;
 const DEFAULT_CAN_SPEED: connection::CanBusSpeed = connection::CanBusSpeed::Kbps500;
 
@@ -49,8 +50,8 @@ impl Settings {
     }
 
     pub fn resolved_log_folder(&self) -> std::path::PathBuf {
-        self.log_folder
-            .clone()
+        self.log_folder 
+            .clone() 
             .unwrap_or_else(|| std::path::PathBuf::from(DEFAULT_LOG_FOLDER))
     }
 }

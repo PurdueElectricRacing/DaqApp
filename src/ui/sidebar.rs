@@ -1,5 +1,5 @@
-use crate::can;
-use crate::{action, app, assets, connection, formatter, messages, util};
+use crate::{can, settings};
+use crate::{action, app, assets, connection, formatter, messages, util, widget_constructor};
 use eframe::egui;
 
 pub fn select_dbc(
@@ -282,10 +282,10 @@ pub fn show(app: &mut app::DAQApp, ctx: &egui::Context) {
                     app.save_settings();
                 }
 
-                let log_display = app.log_folder
-                    .as_deref()
-                    .unwrap_or(std::path::Path::new(can::daq_logger::LOG_FOLDER_PATH));
-                ui.label(format!("{}", log_display.display()));
+                let log_display = app.log_folder.clone().unwrap_or_else(|| {
+                    util::get_absolute_path_to(settings::DEFAULT_LOG_FOLDER)
+                });
+                ui.label(log_display.display().to_string());
             });
 
             ui.separator();
