@@ -284,9 +284,9 @@ pub fn show(app: &mut app::DAQApp, ctx: &egui::Context) {
 
                 let log_display = app
                     .log_folder
-                    .as_deref()
-                    .unwrap_or(std::path::Path::new(can::daq_logger::LOG_FOLDER_PATH));
-                ui.label(format!("{}", log_display.display()));
+                    .clone()
+                    .unwrap_or_else(|| util::get_absolute_path_to(can::daq_logger::LOG_FOLDER_PATH));
+                ui.label(log_display.display().to_string());
             });
 
             ui.separator();
