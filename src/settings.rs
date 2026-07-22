@@ -49,8 +49,8 @@ impl Settings {
     }
 
     pub fn resolved_log_folder(&self) -> std::path::PathBuf {
-        self.log_folder 
-            .clone() 
+        self.log_folder
+            .clone()
             .unwrap_or_else(|| std::path::PathBuf::from(DEFAULT_LOG_FOLDER))
     }
 }

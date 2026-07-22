@@ -28,7 +28,11 @@ pub struct DaqLogger {
 impl DaqLogger {
     pub fn new(folder_path: std::path::PathBuf) -> Self {
         if let Err(e) = create_dir_all(&folder_path) {
-            log::error!("Failed to create directory for logs: {:?}: {}", folder_path, e);
+            log::error!(
+                "Failed to create directory for logs: {:?}: {}",
+                folder_path,
+                e
+            );
         }
 
         Self {

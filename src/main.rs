@@ -41,7 +41,7 @@ fn main() -> eframe::Result<()> {
         can_to_ui_tx,
         ui_to_can_rx,
         settings.selected_source.clone(),
-        settings.resolved_log_folder()
+        settings.resolved_log_folder(),
     );
 
     let per_img = eframe::icon_data::from_png_bytes(assets::PER_LOGO_BYTES)
