@@ -5,7 +5,7 @@ const READ_RETRY_SLEEP_MS: u64 = 2;
 const BUS_LOAD_UPDATE_MS: u128 = 200;
 
 // Returns the number of payload data bytes in the CAN frame if it was a Can2 frame
-fn process_can_frame(frame: slcan::CanFrame, state: &can::state::State) -> usize {
+fn process_can_frame(frame: &slcan::CanFrame, state: &can::state::State) -> usize {
     match frame {
         slcan::CanFrame::Can2(frame2) => {
             let decode_msg_id = util::can::slcan_to_u32_with_extid_flag(&frame2.id());
