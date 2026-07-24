@@ -234,7 +234,7 @@ pub fn start_can_thread(
                     for frame in frames {
                         let data_bytes = process_can_frame(&frame, &state);
                         state.bus_load_tracker.record_frame(data_bytes);
-                        
+
                         // Log each frame (buffered, not flushed yet)
                         match &frame {
                             slcan::CanFrame::Can2(f2) => daq_logger.log_can2_frame(f2, 0),

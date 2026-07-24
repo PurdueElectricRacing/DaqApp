@@ -41,8 +41,12 @@ fn main() -> eframe::Result<()> {
         .log_folder
         .clone()
         .unwrap_or_else(|| std::path::PathBuf::from(settings::DEFAULT_LOG_FOLDER));
-    let _can_thread =
-        can::thread::start_can_thread(can_to_ui_tx, ui_to_can_rx, settings.selected_source.clone(), log_folder);
+    let _can_thread = can::thread::start_can_thread(
+        can_to_ui_tx,
+        ui_to_can_rx,
+        settings.selected_source.clone(),
+        log_folder,
+    );
 
     let per_img = eframe::icon_data::from_png_bytes(assets::PER_LOGO_BYTES)
         .expect("Failed to load logo image");
