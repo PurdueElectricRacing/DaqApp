@@ -273,6 +273,21 @@ pub fn show(app: &mut app::DAQApp, ctx: &egui::Context) {
                 }
             });
 
+            ui.horizontal(|ui| {
+                if ui.button("Select Log Folder").clicked()
+                    && let Some(path) = rfd::FileDialog::new().pick_folder()
+                {
+                    app.log_folder = Some(path);
+                    app.save_settings();
+                }
+
+                let log_display = app.log_folder.clone().unwrap_or_else(|| {
+                    util::get_absolute_path_to(settings::DEFAULT_LOG_FOLDER)
+                });
+
+                ui.label(log_display.display().to_string());
+            });
+
             ui.separator();
 
             if ui.button("Reload formatter").clicked() {

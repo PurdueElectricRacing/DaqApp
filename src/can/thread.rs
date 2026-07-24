@@ -80,9 +80,11 @@ pub fn start_can_thread(
     can_to_ui_tx: std::sync::mpsc::Sender<messages::MsgFromCan>,
     ui_to_can_rx: std::sync::mpsc::Receiver<messages::MsgFromUi>,
     selected_source: Option<connection::ConnectionSource>,
+    log_folder: std::path::PathBuf,
 ) -> std::thread::JoinHandle<()> {
     std::thread::spawn(move || {
         let mut state = can::state::State::new(can_to_ui_tx, ui_to_can_rx, selected_source);
+        let mut daq_logger = can::daq_logger::DaqLogger::new(log_folder);
 
         // MAIN LOOP
         loop {
@@ -229,9 +231,16 @@ pub fn start_can_thread(
             match active_driver.read_frames() {
                 Ok(frames) => {
                     for frame in frames {
-                        let data_bytes = process_can_frame(frame, &state);
+                        let data_bytes = process_can_frame(&frame, &state);
                         state.bus_load_tracker.record_frame(data_bytes);
+                        
+                        // Log each frame (buffered, not flushed yet)
+                        match &frame {
+                            slcan::CanFrame::Can2(f2) => daq_logger.log_can2_frame(f2, 0),
+                            slcan::CanFrame::CanFd(ffd) => daq_logger.log_canfd_frame(ffd, 0),
+                        }
                     }
+
                     // Send bus load updates periodically
                     if state.last_bus_load_update.elapsed().as_millis() >= BUS_LOAD_UPDATE_MS {
                         state.bus_load_tracker.cleanup();
@@ -288,6 +297,10 @@ pub fn start_can_thread(
                 }
             }
         }
+
+        // Cleanup on thread exit
+        daq_logger.shutdown();
+        
         unreachable!("CAN thread should never exit on its own");
     })
 }
