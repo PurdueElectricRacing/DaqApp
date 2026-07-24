@@ -50,7 +50,7 @@ impl DaqLogger {
         self.start_time = Instant::now();
     }
 
-    pub fn log_can2_frame(&mut self, frame: &slcan::Can2Frame, bus_id: u8) {
+    pub fn log_can2_frame(&mut self, frame: &slcan::Can2Frame, is_bus_1: bool) {
         let (id, data) = match frame.id() {
             slcan::Id::Standard(sid) => {
                 let id = sid.as_raw() as u32;
@@ -62,7 +62,7 @@ impl DaqLogger {
             }
         };
 
-        let frame_identity = if bus_id != 0 { id | BUS_ID_MASK } else { id };
+        let frame_identity = if is_bus_1 { id | BUS_ID_MASK } else { id };
 
         let mut data_array = [0u8; 8];
         let len = data.len().min(8);
@@ -79,7 +79,7 @@ impl DaqLogger {
         self.add_frame(raw_frame);
     }
 
-    pub fn log_canfd_frame(&mut self, _frame: &slcan::CanFdFrame, _bus_id: u8) {
+    pub fn log_canfd_frame(&mut self, _frame: &slcan::CanFdFrame, _is_bus_1: bool) {
         // RawFrame is fixed at 8 bytes (CAN 2.0 format); FD frames are not logged
     }
 

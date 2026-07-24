@@ -237,8 +237,8 @@ pub fn start_can_thread(
 
                         // Log each frame (buffered, not flushed yet)
                         match &frame {
-                            slcan::CanFrame::Can2(f2) => daq_logger.log_can2_frame(f2, 0),
-                            slcan::CanFrame::CanFd(ffd) => daq_logger.log_canfd_frame(ffd, 0),
+                            slcan::CanFrame::Can2(f2) => daq_logger.log_can2_frame(f2, false),
+                            slcan::CanFrame::CanFd(ffd) => daq_logger.log_canfd_frame(ffd, false),
                         }
                     }
 
