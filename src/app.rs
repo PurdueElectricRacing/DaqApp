@@ -64,7 +64,7 @@ impl DAQApp {
             udp_port: self.udp_port,
             theme: self.theme_selection,
             pixels_per_point: self.pixels_per_point,
-            log_folder: self.log_folder.clonse(),
+            log_folder: self.log_folder.clone(),
         };
         settings.save();
     }

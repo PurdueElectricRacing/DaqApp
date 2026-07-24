@@ -84,7 +84,7 @@ pub fn start_can_thread(
 ) -> std::thread::JoinHandle<()> {
     std::thread::spawn(move || {
         let mut state = can::state::State::new(can_to_ui_tx, ui_to_can_rx, selected_source);
-        let mut daq_logger = can::daq_logger::DaqLogger::new(log_folder);
+        let mut daq_logger = can::daq_parser::DaqLogger::new(log_folder);
 
         // MAIN LOOP
         loop {
@@ -200,6 +200,7 @@ pub fn start_can_thread(
                                 .can_to_ui_tx
                                 .send(messages::MsgFromCan::ConnectionSuccessful)
                                 .expect("Failed to send connection successful message");
+                            daq_logger.reset_start_time();
                             log::info!("Connected to {:?}", source);
                         }
                         Err(e) => {
@@ -298,9 +299,6 @@ pub fn start_can_thread(
             }
         }
 
-        // Cleanup on thread exit
-        daq_logger.shutdown();
-        
         unreachable!("CAN thread should never exit on its own");
     })
 }

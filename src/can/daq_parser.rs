@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 pub const LOG_FILE_ROTATE_MS: u128 = 60000;
-pub const LAST_FLUSH_MS: u128 = 1000;
+pub const DEFAULT_FLUSH_MS: u128 = 1000;
 
 pub fn byte_to_bcd_format(val: u8) -> u8 {
     ((val / 10) << 4) | (val % 10)
@@ -42,7 +42,11 @@ impl DaqLogger {
         }
     }
 
-    pub fn log_frame(&mut self, frame: &slcan::Can2Frame, bus_id: u8) {
+    pub fn reset_start_time(&mut self) {
+        self.start_time = Instant::now();
+    }
+
+    pub fn log_can2_frame(&mut self, frame: &slcan::Can2Frame, bus_id: u8) {
         let (id, data) = match frame.id() {
             slcan::Id::Standard(sid) => {
                 let id = sid.as_raw() as u32;
@@ -57,7 +61,8 @@ impl DaqLogger {
         let frame_identity = if bus_id != 0 { id | BUS_ID_MASK } else { id };
 
         let mut data_array = [0u8; 8];
-        data_array[..data.len().min(8)].copy_from_slice(&data[..data.len().min(8)]);
+        let len = data.len().min(8);
+        data_array[..len].copy_from_slice(&data[..len]);
 
         let ticks_ms = self.start_time.elapsed().as_millis() as u32;
 
@@ -70,12 +75,16 @@ impl DaqLogger {
         self.add_frame(raw_frame);
     }
 
+    pub fn log_canfd_frame(&mut self, _frame: &slcan::CanFdFrame, _bus_id: u8) {
+        // RawFrame is fixed at 8 bytes (CAN 2.0 format); FD frames are not logged
+    }
+
     fn add_frame(&mut self, frame: RawFrame) {
         self.buffer.push(frame);
 
         //Flush every 1 second
         if self.buffer.len() >= self.buffer_capacity
-            || self.last_flush.elapsed().as_millis() >= 1000
+            || self.last_flush.elapsed().as_millis() >= DEFAULT_FLUSH_MS
         {
             self.flush();
         }
@@ -87,7 +96,7 @@ impl DaqLogger {
         }
 
         // Create new file if time of creation has exceed threshold
-        if self.file.is_some() && self.file_created_at.elapsed().as_millis() >= LOG_FRAMES_MS {
+        if self.file.is_some() && self.file_created_at.elapsed().as_millis() >= LOG_FILE_ROTATE_MS {
             self.file = None;
         }
 
@@ -133,16 +142,13 @@ impl DaqLogger {
         self.last_flush = Instant::now();
     }
 
-    pub fn shutdown(&mut self) {
-        self.flush();
-        if let Some(ref mut file) = self.file.take() {
-            let _ = file.sync_all();
-        }
-    }
 }
 
 impl Drop for DaqLogger {
     fn drop(&mut self) {
-        self.shutdown();
+        self.flush();
+        if let Some(ref mut file) = self.file.take() {
+            let _ = file.sync_all();
+        }
     }
 }
