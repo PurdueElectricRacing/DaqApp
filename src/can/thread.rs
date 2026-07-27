@@ -118,6 +118,9 @@ pub fn start_can_thread(
                     messages::MsgFromUi::DeleteSendMessage { msg_id } => {
                         state.delete_send_message(msg_id);
                     }
+                    messages::MsgFromUi::UpdateLogFolder(path) => {
+                        daq_logger.update_folder(path);
+                    }
                 }
             }
             let msgs_to_send = state.send_this_tick();

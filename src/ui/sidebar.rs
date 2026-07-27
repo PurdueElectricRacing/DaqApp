@@ -279,6 +279,9 @@ pub fn show(app: &mut app::DAQApp, ctx: &egui::Context) {
                 if ui.button("Select Log Folder").clicked()
                     && let Some(path) = rfd::FileDialog::new().pick_folder()
                 {
+                    app.ui_to_can_tx
+                        .send(messages::MsgFromUi::UpdateLogFolder(path.clone()))
+                        .expect("Failed to send log folder update");
                     app.log_folder = Some(path);
                     app.save_settings();
                 }

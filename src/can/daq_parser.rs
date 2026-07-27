@@ -50,6 +50,19 @@ impl DaqLogger {
         self.start_time = Instant::now();
     }
 
+    pub fn update_folder(&mut self, new_folder: std::path::PathBuf) {
+        self.flush();
+        self.file = None;
+        self.folder_path = new_folder;
+        if let Err(e) = create_dir_all(&self.folder_path) {
+            log::error!(
+                "Failed to create directory for logs: {:?}: {}",
+                self.folder_path,
+                e
+            );
+        }
+    }
+
     pub fn log_can2_frame(&mut self, frame: &slcan::Can2Frame, is_bus_1: bool) {
         let (id, data) = match frame.id() {
             slcan::Id::Standard(sid) => {
