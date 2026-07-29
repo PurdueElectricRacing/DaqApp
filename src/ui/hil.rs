@@ -95,7 +95,7 @@ impl Hil {
     }
 
     pub fn show(&mut self, ui: &mut egui::Ui) -> egui_tiles::UiResponse {
-        let mut idle_requestedd = false;
+        let mut idle_requested = false;
 
         egui::ScrollArea::vertical().show(ui, |ui| match &mut self.hil_state {
             hil::run::HilState::Idle => {
@@ -162,14 +162,14 @@ impl Hil {
                     // ui.label("HIL finished! Review the results below.");
                     ui.horizontal(|ui| {
                         if ui.button("Exit").clicked() {
-                            idle_requestedd = true;
+                            idle_requested = true;
                         }
                         ui.label("HIL finished! Review the results below.");
                     });
                 } else {
                     ui.horizontal(|ui| {
                         if ui.button("Stop").clicked() {
-                            idle_requestedd = true;
+                            idle_requested = true;
                         }
                         let time_since_start = start_time.elapsed().as_millis();
                         ui.label(format!(
@@ -197,7 +197,7 @@ impl Hil {
             }
         });
 
-        if idle_requestedd {
+        if idle_requested {
             self.hil_state = hil::run::HilState::Idle;
         }
 
