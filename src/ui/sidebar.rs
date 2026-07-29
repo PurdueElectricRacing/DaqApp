@@ -106,9 +106,8 @@ pub fn show(app: &mut app::DAQApp, ctx: &egui::Context) {
                 ));
             }
             if ui.button("Add HIL").clicked() {
-                app.action_queue
-                    .push(action::AppAction::SpawnWidget(
-                        widget_constructor::WidgetConstructor::Hil,
+                app.action_queue.push(action::AppAction::SpawnWidget(
+                    widget_constructor::WidgetConstructor::Hil,
                 ));
             }
 
