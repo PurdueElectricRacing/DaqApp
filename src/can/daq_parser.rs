@@ -92,10 +92,6 @@ impl DaqLogger {
         self.add_frame(raw_frame);
     }
 
-    pub fn log_canfd_frame(&mut self, _frame: &slcan::CanFdFrame, _is_bus_1: bool) {
-        // RawFrame is fixed at 8 bytes (CAN 2.0 format); FD frames are not logged
-    }
-
     fn add_frame(&mut self, frame: RawFrame) {
         self.buffer.push(frame);
 
