@@ -130,7 +130,23 @@ impl DaqLogger {
             );
 
             let file_path = self.folder_path.join(filename);
-            match File::create(&file_path) {
+            let created = File::create(&file_path).or_else(|e| {
+                log::warn!(
+                    "Failed to create log file {:?}: {}; recreating log folder",
+                    file_path,
+                    e
+                );
+                if let Err(e) = create_dir_all(&self.folder_path) {
+                    log::error!(
+                        "Failed to recreate directory for logs: {:?}: {}",
+                        self.folder_path,
+                        e
+                    );
+                }
+                File::create(&file_path)
+            });
+
+            match created {
                 Ok(f) => self.file = Some(f),
                 Err(e) => {
                     log::error!("Failed to create log file {:?}: {}", file_path, e);
