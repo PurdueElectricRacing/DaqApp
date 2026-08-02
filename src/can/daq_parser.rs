@@ -116,8 +116,8 @@ impl DaqLogger {
         // cleared the logs folder while daqapp was still running).
         let rotated_out =
             self.file.is_some() && self.file_created_at.elapsed().as_millis() >= LOG_FILE_ROTATE_MS;
-        let deleted_out = self.file.is_some()
-            && !self.current_file_path.as_ref().is_some_and(|p| p.exists());
+        let deleted_out =
+            self.file.is_some() && !self.current_file_path.as_ref().is_some_and(|p| p.exists());
 
         if rotated_out || deleted_out {
             self.file = None;
