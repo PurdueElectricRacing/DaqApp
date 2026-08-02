@@ -17,6 +17,7 @@ pub fn byte_to_bcd_format(val: u8) -> u8 {
 
 pub struct DaqLogger {
     file: Option<File>,
+    current_file_path: Option<PathBuf>,
     folder_path: PathBuf,
     buffer: Vec<RawFrame>,
     file_created_at: Instant,
@@ -37,6 +38,7 @@ impl DaqLogger {
 
         Self {
             file: None,
+            current_file_path: None,
             folder_path: folder_path,
             buffer: Vec::with_capacity(10000),
             file_created_at: Instant::now(),
@@ -53,6 +55,7 @@ impl DaqLogger {
     pub fn update_folder(&mut self, new_folder: std::path::PathBuf) {
         self.flush();
         self.file = None;
+        self.current_file_path = None;
         self.folder_path = new_folder;
         if let Err(e) = create_dir_all(&self.folder_path) {
             log::error!(
@@ -108,9 +111,17 @@ impl DaqLogger {
             return;
         }
 
-        // Create new file if time of creation has exceed threshold
-        if self.file.is_some() && self.file_created_at.elapsed().as_millis() >= LOG_FILE_ROTATE_MS {
+        // Create new file if time of creation has exceed threshold, or if the
+        // current log file/folder has been deleted out from under us (e.g. someone
+        // cleared the logs folder while daqapp was still running).
+        let rotated_out =
+            self.file.is_some() && self.file_created_at.elapsed().as_millis() >= LOG_FILE_ROTATE_MS;
+        let deleted_out = self.file.is_some()
+            && !self.current_file_path.as_ref().is_some_and(|p| p.exists());
+
+        if rotated_out || deleted_out {
             self.file = None;
+            self.current_file_path = None;
         }
 
         if self.file.is_none() {
@@ -147,7 +158,10 @@ impl DaqLogger {
             });
 
             match created {
-                Ok(f) => self.file = Some(f),
+                Ok(f) => {
+                    self.file = Some(f);
+                    self.current_file_path = Some(file_path);
+                }
                 Err(e) => {
                     log::error!("Failed to create log file {:?}: {}", file_path, e);
                     self.buffer.clear();
