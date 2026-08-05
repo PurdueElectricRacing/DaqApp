@@ -75,8 +75,8 @@ impl GpsPlot {
             // loop through all gps signals
             match sig.name.as_str() {
                 "longitude" => lon = Some(sig.value.physical), // save long
-                "latitude" => lat = Some(sig.value.physical), // save lat
-                _ => {}                                       // ignore other signals
+                "latitude" => lat = Some(sig.value.physical),  // save lat
+                _ => {}                                        // ignore other signals
             }
         }
 
