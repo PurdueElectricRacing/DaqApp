@@ -103,7 +103,7 @@ pub fn show(app: &mut app::DAQApp, ctx: &egui::Context) {
                     widget_constructor::WidgetConstructor::GpsPlot,
                 ));
             }
-            
+
             if ui.button("Add Dynamics").clicked() {
                 app.action_queue.push(action::AppAction::SpawnWidget(
                     widget_constructor::WidgetConstructor::Dynamics,
