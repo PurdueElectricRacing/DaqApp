@@ -15,9 +15,13 @@ pub fn byte_to_bcd_format(val: u8) -> u8 {
     ((val / 10) << 4) | (val % 10)
 }
 
+struct OpenLogFile {
+    file: File,
+    current_file_path: PathBuf,
+}
+
 pub struct DaqLogger {
-    file: Option<File>,
-    current_file_path: Option<PathBuf>,
+    open_file: Option<OpenLogFile>,
     folder_path: PathBuf,
     buffer: Vec<RawFrame>,
     file_created_at: Instant,
@@ -37,8 +41,7 @@ impl DaqLogger {
         }
 
         Self {
-            file: None,
-            current_file_path: None,
+            open_file: None,
             folder_path: folder_path,
             buffer: Vec::with_capacity(10000),
             file_created_at: Instant::now(),
@@ -54,8 +57,7 @@ impl DaqLogger {
 
     pub fn update_folder(&mut self, new_folder: std::path::PathBuf) {
         self.flush();
-        self.file = None;
-        self.current_file_path = None;
+        self.open_file = None;
         self.folder_path = new_folder;
         if let Err(e) = create_dir_all(&self.folder_path) {
             log::error!(
@@ -114,17 +116,18 @@ impl DaqLogger {
         // Create new file if time of creation has exceed threshold, or if the
         // current log file/folder has been deleted out from under us (e.g. someone
         // cleared the logs folder while daqapp was still running).
-        let rotated_out =
-            self.file.is_some() && self.file_created_at.elapsed().as_millis() >= LOG_FILE_ROTATE_MS;
-        let deleted_out =
-            self.file.is_some() && !self.current_file_path.as_ref().is_some_and(|p| p.exists());
+        let rotated_out = self.open_file.is_some()
+            && self.file_created_at.elapsed().as_millis() >= LOG_FILE_ROTATE_MS;
+        let deleted_out = self
+            .open_file
+            .as_ref()
+            .is_some_and(|f| !f.current_file_path.exists());
 
         if rotated_out || deleted_out {
-            self.file = None;
-            self.current_file_path = None;
+            self.open_file = None;
         }
 
-        if self.file.is_none() {
+        if self.open_file.is_none() {
             let now = chrono::Local::now();
             self.file_created_at = Instant::now();
 
@@ -158,9 +161,11 @@ impl DaqLogger {
             });
 
             match created {
-                Ok(f) => {
-                    self.file = Some(f);
-                    self.current_file_path = Some(file_path);
+                Ok(file) => {
+                    self.open_file = Some(OpenLogFile {
+                        file,
+                        current_file_path: file_path,
+                    });
                 }
                 Err(e) => {
                     log::error!("Failed to create log file {:?}: {}", file_path, e);
@@ -171,12 +176,12 @@ impl DaqLogger {
             }
         }
 
-        if let Some(ref mut file) = self.file {
-            if let Err(e) = file.write_all(bytemuck::cast_slice(&self.buffer)) {
+        if let Some(ref mut open_file) = self.open_file {
+            if let Err(e) = open_file.file.write_all(bytemuck::cast_slice(&self.buffer)) {
                 log::error!("Failed to write to log file: {}", e);
             }
 
-            if let Err(e) = file.flush() {
+            if let Err(e) = open_file.file.flush() {
                 log::error!("Failed to flush log file: {}", e);
             }
         }
@@ -189,8 +194,8 @@ impl DaqLogger {
 impl Drop for DaqLogger {
     fn drop(&mut self) {
         self.flush();
-        if let Some(ref mut file) = self.file.take() {
-            let _ = file.sync_all();
+        if let Some(open_file) = self.open_file.take() {
+            let _ = open_file.file.sync_all();
         }
     }
 }
