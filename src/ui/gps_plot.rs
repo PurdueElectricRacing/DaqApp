@@ -64,7 +64,7 @@ impl GpsPlot {
             return None; // ignore if msg isn't a parsed can message
         };
 
-        if parsed.decoded.name != "GPS_Position" {
+        if parsed.decoded.name != "gps_coordinates" {
             return None; // ignore non gps messages
         }
 
@@ -74,8 +74,8 @@ impl GpsPlot {
         for (_, sig) in &parsed.decoded.signals {
             // loop through all gps signals
             match sig.name.as_str() {
-                "Latitude" => lat = Some(sig.value.physical), // save lat
-                "Longitude" => lon = Some(sig.value.physical), // save long
+                "longitude" => lon = Some(sig.value.physical), // save long
+                "latitude" => lat = Some(sig.value.physical), // save lat
                 _ => {}                                       // ignore other signals
             }
         }
